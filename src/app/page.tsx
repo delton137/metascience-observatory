@@ -21,7 +21,7 @@ export default function Home() {
         <Feature title="Evidence diagnostics" description="AI tooling to surface statistical errors, p-hacking, and data issues." />
       </section> */}
       <footer className="px-6 sm:px-8 md:px-12 lg:px-16 xl:px-24 py-10 text-sm text-black/60 dark:text-white/60">
-        © {new Date().getFullYear()} Metascience Observatory
+        © {new Date().getFullYear()} Global Metascience Observatory
       </footer>
     </main>
   );
