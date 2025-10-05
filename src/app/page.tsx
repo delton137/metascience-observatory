@@ -15,11 +15,11 @@ export default function Home() {
           <p className="mt-3 text-sm text-black/60 dark:text-white/60">Get launch updates and early access.</p>
         </div>
       </section>
-      <section className="px-6 sm:px-8 md:px-12 lg:px-16 xl:px-24 pb-20 grid gap-6 md:grid-cols-3">
+      {/* <section className="px-6 sm:px-8 md:px-12 lg:px-16 xl:px-24 pb-20 grid gap-6 md:grid-cols-3">
         <Feature title="Reproducibility map" description="Field-by-field replication rates using large-scale LLM-assisted reads." />
         <Feature title="Journal rigor metrics" description="Alternative to impact factor, focused on quality and replicability." />
         <Feature title="Evidence diagnostics" description="AI tooling to surface statistical errors, p-hacking, and data issues." />
-      </section>
+      </section> */}
       <footer className="px-6 sm:px-8 md:px-12 lg:px-16 xl:px-24 py-10 text-sm text-black/60 dark:text-white/60">
         © {new Date().getFullYear()} Metascience Observatory
       </footer>
