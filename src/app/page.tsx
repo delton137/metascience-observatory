@@ -7,7 +7,7 @@ export default function Home() {
         <div className="max-w-3xl">
           <h1 className="text-4xl md:text-6xl font-semibold tracking-tight">Metascience Observatory</h1>
           <p className="mt-6 text-lg md:text-xl text-black/70 dark:text-white/70">
-            Mapping rigor and reproducibility with AI. Research, data, and tools to upgrade science.
+            (under construction).
           </p>
           <div className="mt-8">
             <SignupForm />
