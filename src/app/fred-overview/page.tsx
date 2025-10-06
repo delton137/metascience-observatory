@@ -62,7 +62,12 @@ export default function FredOverviewPage() {
     list.sort((a, b) => {
       const dir = sortDir === "asc" ? 1 : -1;
       if (sortKey === "discipline") return dir * a.discipline.localeCompare(b.discipline);
-      return dir * ((b as any)[sortKey] - (a as any)[sortKey]);
+      // Narrow to indexable map to avoid any
+      const aa = a as unknown as Record<string, number | string>;
+      const bb = b as unknown as Record<string, number | string>;
+      const av = (aa[sortKey] ?? 0) as number;
+      const bv = (bb[sortKey] ?? 0) as number;
+      return dir * (bv - av);
     });
     return list;
   }, [data, sortKey, sortDir]);

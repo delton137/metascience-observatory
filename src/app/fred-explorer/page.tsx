@@ -304,7 +304,7 @@ export default function FredExplorerPage() {
           </div>
         </div>
         <div className="border rounded p-4 col-span-2">
-          <div className="text-sm opacity-70">Replication Effect Size vs Original Effect Size (Converted to Pearson's r)</div>
+          <div className="text-sm opacity-70">Replication Effect Size vs Original Effect Size (Converted to Pearson&apos;s r)</div>
           <div className="mt-2">
             <InlineScatter rows={filteredRows} />
           </div>
