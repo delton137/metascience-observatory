@@ -21,7 +21,7 @@ export default async function Home() {
       <section className="px-6 sm:px-8 md:px-12 lg:px-16 xl:px-24 py-20 md:py-28">
         <div className="max-w-3xl">
           <h1 className="text-4xl md:text-6xl font-semibold tracking-tight">{title}</h1>
-          <div className="mt-6 space-y-4 text-base md:text-lg text-black/70 dark:text-white/70">
+          <div className="mt-6 space-y-4 text-base md:text-lg text-black/85 dark:text-white/70">
             <p>
               Is science healthy? How many papers are fake or fraudulent? How do rigor and reproducibility vary across fields, journals, and institutions?
             </p>
@@ -32,8 +32,10 @@ export default async function Home() {
           <div className="mt-8">
             <SignupForm />
           </div>
-          <p className="mt-3 text-sm text-black/60 dark:text-white/60">Subscribe to get notified when we launch.</p>
+          <p className="mt-3 text-sm">Subscribe to get notified when we launch.</p>
+          <p className="mt-3 text-sm text-black/85 dark:text-white/70">In the meantime, <a href="/fred-explorer" className="underline">check out this experimental interface</a> for the existing FReD Replication Database.</p>
         </div>
+        
       </section>
       <footer className="px-6 sm:px-8 md:px-12 lg:px-16 xl:px-24 py-10 text-sm text-black/60 dark:text-white/60">
         © {new Date().getFullYear()} Global Metascience Observatory
