@@ -3,15 +3,11 @@ import { sanityFetch } from "@/sanity/lib/live";
 
 type HomepageData = {
   title?: string;
-  subtitle?: string;
-  ctaLabel?: string;
 };
 
 async function getHomepage(): Promise<HomepageData | null> {
   const query = `*[_type == "homepage" && _id == "homepage"][0]{
-    title,
-    subtitle,
-    ctaLabel
+    title
   }`;
   const { data } = await sanityFetch({ query, params: {} });
   return (data as HomepageData) || null;
@@ -20,15 +16,19 @@ async function getHomepage(): Promise<HomepageData | null> {
 export default async function Home() {
   const homepage = await getHomepage();
   const title = homepage?.title ?? "Metascience Observatory";
-  const subtitle =
-    homepage?.subtitle ??
-    "Is science healthy? How many papers are fake or fraudulent? How do rigor and reproducibility vary across fields, journals, and institutions?\n\nAt the Global Metascience Observatory we are using AI to analyze every scientific paper and help answer these questions and advance metascientific research.";
   return (
     <main className="min-h-screen">
       <section className="px-6 sm:px-8 md:px-12 lg:px-16 xl:px-24 py-20 md:py-28">
         <div className="max-w-3xl">
           <h1 className="text-4xl md:text-6xl font-semibold tracking-tight">{title}</h1>
-          <p className="mt-6 text-lg md:text-xl text-black/70 dark:text-white/70">{subtitle}</p>
+          <div className="mt-6 space-y-4 text-base md:text-lg text-black/70 dark:text-white/70">
+            <p>
+              Is science healthy? How many papers are fake or fraudulent? How do rigor and reproducibility vary across fields, journals, and institutions?
+            </p>
+            <p>
+              At the Global Metascience Observatory we are using AI to analyze every scientific paper to help answer these questions.
+            </p>
+          </div>
           <div className="mt-8">
             <SignupForm />
           </div>
