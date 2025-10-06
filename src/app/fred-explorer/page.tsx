@@ -193,15 +193,10 @@ export default function FredExplorerPage() {
     let failure = 0;
     let inconclusive = 0;
     for (const r of filteredRows) {
-      const res = String(r.result ?? "").toLowerCase();
-      const eR = toNumber(r.es_replication);
-      if (res.includes("inconcl")) {
-        inconclusive++;
-      } else if (eR != null && eR < 0) {
-        failure++;
-      } else {
-        success++;
-      }
+      const res = String(r.result ?? "").trim().toLowerCase();
+      if (res.includes("success")) success++;
+      else if (res.includes("failure") || res.includes("reversal")) failure++;
+      else inconclusive++;
     }
     const pct = (v: number) => (n > 0 ? Math.round((v / n) * 1000) / 10 : 0);
     return { n, success, failure, inconclusive, pctSuccess: pct(success), pctFailure: pct(failure), pctInconclusive: pct(inconclusive) };
