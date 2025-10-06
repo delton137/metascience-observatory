@@ -21,6 +21,179 @@ function numberFormatter(n: number): string {
   return new Intl.NumberFormat().format(n);
 }
 
+function fillTimelineGaps(data: TimelineDatum[], startYear: number, endYear: number): TimelineDatum[] {
+  const byYear = new Map<number, number>();
+  for (const d of data) byYear.set(d.year, d.count);
+  const filled: TimelineDatum[] = [];
+  for (let y = startYear; y <= endYear; y++) {
+    filled.push({ year: y, count: byYear.get(y) ?? 0 });
+  }
+  return filled;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function DualRangeSlider({
+  min,
+  max,
+  start,
+  end,
+  onChange,
+}: {
+  min: number;
+  max: number;
+  start: number;
+  end: number;
+  onChange: (range: { start: number; end: number }) => void;
+}) {
+  const [active, setActive] = useState<"start" | "end" | null>(null);
+  const [trackEl, setTrackEl] = useState<HTMLDivElement | null>(null);
+
+  function valueToPercent(v: number): number {
+    if (max === min) return 0;
+    return ((v - min) / (max - min)) * 100;
+  }
+
+  function clientXToValue(clientX: number): number {
+    if (!trackEl) return start;
+    const rect = trackEl.getBoundingClientRect();
+    const ratio = clamp((clientX - rect.left) / rect.width, 0, 1);
+    const val = Math.round(min + ratio * (max - min));
+    return clamp(val, min, max);
+  }
+
+  useEffect(() => {
+    function onMove(e: MouseEvent | TouchEvent) {
+      if (!active) return;
+      let clientX: number | null = null;
+      if (e instanceof MouseEvent) clientX = e.clientX;
+      else if (e instanceof TouchEvent && e.touches[0]) clientX = e.touches[0].clientX;
+      if (clientX == null) return;
+      const raw = clientXToValue(clientX);
+      if (active === "start") {
+        const nextStart = Math.min(raw, end);
+        onChange({ start: nextStart, end });
+      } else if (active === "end") {
+        const nextEnd = Math.max(raw, start);
+        onChange({ start, end: nextEnd });
+      }
+    }
+    function onUp() {
+      setActive(null);
+    }
+    if (active) {
+      window.addEventListener("mousemove", onMove);
+      window.addEventListener("touchmove", onMove, { passive: false });
+      window.addEventListener("mouseup", onUp);
+      window.addEventListener("touchend", onUp);
+      return () => {
+        window.removeEventListener("mousemove", onMove);
+        window.removeEventListener("touchmove", onMove as any);
+        window.removeEventListener("mouseup", onUp);
+        window.removeEventListener("touchend", onUp);
+      };
+    }
+  }, [active, start, end, trackEl, min, max]);
+
+  const startPercent = valueToPercent(start);
+  const endPercent = valueToPercent(end);
+  const left = Math.min(startPercent, endPercent);
+  const width = Math.abs(endPercent - startPercent);
+
+  return (
+    <div className="w-full select-none">
+      <div
+        ref={setTrackEl}
+        className="relative h-2 rounded bg-gray-200"
+        onMouseDown={(e) => {
+          if (!trackEl) return;
+          const val = clientXToValue(e.clientX);
+          const distStart = Math.abs(val - start);
+          const distEnd = Math.abs(val - end);
+          if (distStart <= distEnd) {
+            onChange({ start: Math.min(val, end), end });
+            setActive("start");
+          } else {
+            onChange({ start, end: Math.max(val, start) });
+            setActive("end");
+          }
+        }}
+        onTouchStart={(e) => {
+          if (!trackEl) return;
+          const t = e.touches[0];
+          const val = clientXToValue(t.clientX);
+          const distStart = Math.abs(val - start);
+          const distEnd = Math.abs(val - end);
+          if (distStart <= distEnd) {
+            onChange({ start: Math.min(val, end), end });
+            setActive("start");
+          } else {
+            onChange({ start, end: Math.max(val, start) });
+            setActive("end");
+          }
+        }}
+      >
+        <div
+          className="absolute top-0 h-2 rounded bg-blue-300/60"
+          style={{ left: `${left}%`, width: `${width}%` }}
+        />
+        {/* start thumb */}
+        <div
+          role="slider"
+          aria-label="Start year"
+          aria-valuemin={min}
+          aria-valuemax={max}
+          aria-valuenow={start}
+          tabIndex={0}
+          className="absolute -top-1 h-4 w-4 rounded-full bg-white border border-gray-400 shadow cursor-grab"
+          style={{ left: `${startPercent}%`, transform: "translateX(-50%)" }}
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            setActive("start");
+          }}
+          onTouchStart={(e) => {
+            e.stopPropagation();
+            setActive("start");
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowLeft" || e.key === "ArrowDown") onChange({ start: clamp(start - 1, min, end), end });
+            if (e.key === "ArrowRight" || e.key === "ArrowUp") onChange({ start: clamp(start + 1, min, end), end });
+          }}
+        />
+        {/* end thumb */}
+        <div
+          role="slider"
+          aria-label="End year"
+          aria-valuemin={min}
+          aria-valuemax={max}
+          aria-valuenow={end}
+          tabIndex={0}
+          className="absolute -top-1 h-4 w-4 rounded-full bg-white border border-gray-400 shadow cursor-grab"
+          style={{ left: `${endPercent}%`, transform: "translateX(-50%)" }}
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            setActive("end");
+          }}
+          onTouchStart={(e) => {
+            e.stopPropagation();
+            setActive("end");
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowLeft" || e.key === "ArrowDown") onChange({ start, end: clamp(end - 1, start, max) });
+            if (e.key === "ArrowRight" || e.key === "ArrowUp") onChange({ start, end: clamp(end + 1, start, max) });
+          }}
+        />
+      </div>
+      <div className="mt-1 flex justify-between text-xs text-gray-500">
+        <span>{min}</span>
+        <span>{max}</span>
+      </div>
+    </div>
+  );
+}
+
 function useDashboardData(params: { startYear?: number | null; endYear?: number | null; nature?: string | null; top?: number | null }) {
   const { startYear, endYear, nature, top } = params;
   const [data, setData] = useState<ApiResponse | null>(null);
@@ -88,7 +261,7 @@ function BarChart({ data, width = 800, height = 420, label = "" }: { data: Array
   );
 }
 
-function LineChart({ data, width = 800, height = 220, label = "" }: { data: TimelineDatum[]; width?: number; height?: number; label?: string }) {
+function LineChart({ data, width = 800, height = 220, label = "", domainStart, domainEnd }: { data: TimelineDatum[]; width?: number; height?: number; label?: string; domainStart?: number; domainEnd?: number }) {
   const paddingLeft = 40;
   const paddingRight = 12;
   const paddingTop = 10;
@@ -96,8 +269,8 @@ function LineChart({ data, width = 800, height = 220, label = "" }: { data: Time
 
   const years = data.map((d) => d.year);
   const counts = data.map((d) => d.count);
-  const minYear = years.length ? Math.min(...years) : 0;
-  const maxYear = years.length ? Math.max(...years) : 1;
+  const minYear = domainStart != null ? domainStart : years.length ? Math.min(...years) : 0;
+  const maxYear = domainEnd != null ? domainEnd : years.length ? Math.max(...years) : 1;
   const maxCount = counts.length ? Math.max(...counts) : 1;
 
   const innerWidth = width - paddingLeft - paddingRight;
@@ -177,7 +350,12 @@ export default function RetractionWatchDashboardPage() {
 
   const journalData = data?.journals ?? [];
   const reasonData = data?.reasons ?? [];
-  const timelineData = data?.timeline ?? [];
+  const rawTimeline = data?.timeline ?? [];
+  const hasRange = yearRange.start != null && yearRange.end != null;
+  const displayTimeline = useMemo(() => {
+    if (!hasRange) return rawTimeline;
+    return fillTimelineGaps(rawTimeline, yearRange.start as number, yearRange.end as number);
+  }, [rawTimeline, hasRange, yearRange.start, yearRange.end]);
 
   return (
     <div className="px-6 sm:px-8 md:px-12 lg:px-16 xl:px-24 py-8">
@@ -227,28 +405,29 @@ export default function RetractionWatchDashboardPage() {
 
       <div className="p-4 border rounded mb-6">
         <label className="block text-sm mb-2">Year range</label>
-        <div className="flex items-center gap-3">
-          <input
-            type="number"
-            className="border rounded px-3 py-2 text-sm w-32"
-            placeholder="Start"
-            value={yearRange.start ?? ""}
-            onChange={(e) => setYearRange((r) => ({ ...r, start: e.target.value ? Number(e.target.value) : null }))}
-          />
-          <span>to</span>
-          <input
-            type="number"
-            className="border rounded px-3 py-2 text-sm w-32"
-            placeholder="End"
-            value={yearRange.end ?? ""}
-            onChange={(e) => setYearRange((r) => ({ ...r, end: e.target.value ? Number(e.target.value) : null }))}
-          />
-          <button
-            className="ml-auto border rounded px-3 py-2 text-sm"
-            onClick={() => setYearRange({ start: data?.yearMin ?? null, end: data?.yearMax ?? null })}
-          >
-            Reset
-          </button>
+        <div className="space-y-3">
+          <div className="text-sm">
+            Selected: {yearRange.start ?? "—"} – {yearRange.end ?? "—"}
+          </div>
+          {data && data.yearMin != null && data.yearMax != null && yearRange.start != null && yearRange.end != null ? (
+            <DualRangeSlider
+              min={data.yearMin}
+              max={data.yearMax}
+              start={yearRange.start}
+              end={yearRange.end}
+              onChange={(range) => setYearRange(range)}
+            />
+          ) : (
+            <div className="text-sm text-gray-500">Loading range…</div>
+          )}
+          <div className="flex">
+            <button
+              className="ml-auto border rounded px-3 py-2 text-sm"
+              onClick={() => setYearRange({ start: data?.yearMin ?? null, end: data?.yearMax ?? null })}
+            >
+              Reset
+            </button>
+          </div>
         </div>
       </div>
 
@@ -285,8 +464,13 @@ export default function RetractionWatchDashboardPage() {
           <div className="text-sm text-gray-500">Loading…</div>
         ) : error ? (
           <div className="text-sm text-red-600">{error}</div>
-        ) : timelineData.length ? (
-          <LineChart data={timelineData} label="Retractions per year" />
+        ) : displayTimeline.length ? (
+          <LineChart
+            data={displayTimeline}
+            label="Retractions per year"
+            domainStart={yearRange.start ?? undefined}
+            domainEnd={yearRange.end ?? undefined}
+          />
         ) : (
           <div className="text-sm text-gray-500">No data for selected filters.</div>
         )}
