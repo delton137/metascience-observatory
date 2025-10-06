@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 type JournalDatum = { name: string; count: number };
 type ReasonDatum = { name: string; count: number };
@@ -56,22 +56,21 @@ function DualRangeSlider({
     return ((v - min) / (max - min)) * 100;
   }
 
-  function clientXToValue(clientX: number): number {
-    if (!trackEl) return start;
-    const rect = trackEl.getBoundingClientRect();
-    const ratio = clamp((clientX - rect.left) / rect.width, 0, 1);
-    const val = Math.round(min + ratio * (max - min));
-    return clamp(val, min, max);
-  }
+  const clientXToValue = useCallback(
+    (clientX: number): number => {
+      if (!trackEl) return start;
+      const rect = trackEl.getBoundingClientRect();
+      const ratio = clamp((clientX - rect.left) / rect.width, 0, 1);
+      const val = Math.round(min + ratio * (max - min));
+      return clamp(val, min, max);
+    },
+    [trackEl, start, min, max]
+  );
 
   useEffect(() => {
-    function onMove(e: MouseEvent | TouchEvent) {
+    const onMouseMove = (e: MouseEvent) => {
       if (!active) return;
-      let clientX: number | null = null;
-      if (e instanceof MouseEvent) clientX = e.clientX;
-      else if (e instanceof TouchEvent && e.touches[0]) clientX = e.touches[0].clientX;
-      if (clientX == null) return;
-      const raw = clientXToValue(clientX);
+      const raw = clientXToValue(e.clientX);
       if (active === "start") {
         const nextStart = Math.min(raw, end);
         onChange({ start: nextStart, end });
@@ -79,23 +78,34 @@ function DualRangeSlider({
         const nextEnd = Math.max(raw, start);
         onChange({ start, end: nextEnd });
       }
-    }
-    function onUp() {
-      setActive(null);
-    }
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      if (!active) return;
+      const t = e.touches[0];
+      if (!t) return;
+      const raw = clientXToValue(t.clientX);
+      if (active === "start") {
+        const nextStart = Math.min(raw, end);
+        onChange({ start: nextStart, end });
+      } else if (active === "end") {
+        const nextEnd = Math.max(raw, start);
+        onChange({ start, end: nextEnd });
+      }
+    };
+    const onUp = () => setActive(null);
     if (active) {
-      window.addEventListener("mousemove", onMove);
-      window.addEventListener("touchmove", onMove, { passive: false });
+      window.addEventListener("mousemove", onMouseMove);
+      window.addEventListener("touchmove", onTouchMove, { passive: false });
       window.addEventListener("mouseup", onUp);
       window.addEventListener("touchend", onUp);
       return () => {
-        window.removeEventListener("mousemove", onMove);
-        window.removeEventListener("touchmove", onMove as any);
+        window.removeEventListener("mousemove", onMouseMove);
+        window.removeEventListener("touchmove", onTouchMove);
         window.removeEventListener("mouseup", onUp);
         window.removeEventListener("touchend", onUp);
       };
     }
-  }, [active, start, end, trackEl, min, max]);
+  }, [active, start, end, min, max, clientXToValue, onChange]);
 
   const startPercent = valueToPercent(start);
   const endPercent = valueToPercent(end);
@@ -346,16 +356,15 @@ export default function RetractionWatchDashboardPage() {
     if (!data) return;
     if (yearRange.start == null && data.yearMin != null) setYearRange((r) => ({ ...r, start: data.yearMin! }));
     if (yearRange.end == null && data.yearMax != null) setYearRange((r) => ({ ...r, end: data.yearMax! }));
-  }, [data]);
+  }, [data, yearRange.start, yearRange.end]);
 
   const journalData = data?.journals ?? [];
   const reasonData = data?.reasons ?? [];
-  const rawTimeline = data?.timeline ?? [];
-  const hasRange = yearRange.start != null && yearRange.end != null;
   const displayTimeline = useMemo(() => {
-    if (!hasRange) return rawTimeline;
-    return fillTimelineGaps(rawTimeline, yearRange.start as number, yearRange.end as number);
-  }, [rawTimeline, hasRange, yearRange.start, yearRange.end]);
+    const base = data?.timeline ?? [];
+    if (yearRange.start == null || yearRange.end == null) return base;
+    return fillTimelineGaps(base, yearRange.start, yearRange.end);
+  }, [data?.timeline, yearRange.start, yearRange.end]);
 
   return (
     <div className="px-6 sm:px-8 md:px-12 lg:px-16 xl:px-24 py-8">
