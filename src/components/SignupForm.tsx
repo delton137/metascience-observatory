@@ -30,7 +30,7 @@ export function SignupForm() {
         return;
       }
       setStatus('success');
-      setMessage('Thanks! Please check your inbox to confirm.');
+      setMessage('Thanks! Please check your inbox to confirm. If you don\'t see an email, check spam');
       setEmail('');
     } catch {
       setStatus('error');
