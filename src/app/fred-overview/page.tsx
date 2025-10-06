@@ -10,11 +10,7 @@ type FredResponse = {
   dictionary: Record<string, string>;
 };
 
-function toNumber(value: unknown): number | null {
-  if (value == null) return null;
-  const n = typeof value === "number" ? value : Number(String(value).trim());
-  return Number.isFinite(n) ? n : null;
-}
+// removed unused toNumber
 
 export default function FredOverviewPage() {
   const [data, setData] = useState<FredResponse | null>(null);
@@ -152,38 +148,6 @@ export default function FredOverviewPage() {
   );
 }
 
-function Scatter({ pairs }: { pairs: Array<{ o: number; r: number }> }) {
-  const width = 520;
-  const height = 360;
-  const margin = { top: 10, right: 10, bottom: 30, left: 30 };
-  const x = (v: number) => ((v + 1) / 2) * (width - margin.left - margin.right);
-  const y = (v: number) => (height - margin.top - margin.bottom) - ((v + 1) / 2) * (height - margin.top - margin.bottom);
-  return (
-    <svg width={width} height={height} className="max-w-full">
-      <g transform={`translate(${margin.left},${margin.top})`}>
-        <rect x={0} y={0} width={width - margin.left - margin.right} height={height - margin.top - margin.bottom} fill="#f3f4f6" />
-        {/* Axes ticks */}
-        {[-1, -0.5, 0, 0.5, 1].map((t) => (
-          <g key={`x-${t}`} transform={`translate(${x(t)},${height - margin.top - margin.bottom})`}>
-            <line y1={0} y2={6} stroke="#111827" strokeWidth={1} />
-            <text y={20} textAnchor="middle" className="text-xs fill-current" style={{ opacity: 0.7 }}>{t}</text>
-          </g>
-        ))}
-        {[-1, -0.5, 0, 0.5, 1].map((t) => (
-          <g key={`y-${t}`} transform={`translate(0,${y(t)})`}>
-            <line x1={-6} x2={0} stroke="#111827" strokeWidth={1} />
-            <text x={-10} dy="0.32em" textAnchor="end" className="text-xs fill-current" style={{ opacity: 0.7 }}>{t}</text>
-          </g>
-        ))}
-        {/* y=x reference */}
-        <line x1={x(-1)} y1={y(-1)} x2={x(1)} y2={y(1)} stroke="#6b7280" strokeDasharray="4 4" />
-        {/* Points */}
-        {pairs.slice(0, 3000).map((p, i) => (
-          <circle key={i} cx={x(p.o)} cy={y(p.r)} r={2} fill="#111827" fillOpacity={0.5} />
-        ))}
-      </g>
-    </svg>
-  );
-}
+// removed unused Scatter
 
 
