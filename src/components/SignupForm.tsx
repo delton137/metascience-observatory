@@ -7,7 +7,7 @@ export function SignupForm() {
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState<string | null>(null);
 
-  async function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setMessage(null);
     const valid = /^\S+@\S+\.\S+$/.test(email);
@@ -32,7 +32,7 @@ export function SignupForm() {
       setStatus('success');
       setMessage('Thanks! Please check your inbox to confirm.');
       setEmail('');
-    } catch (_err) {
+    } catch {
       setStatus('error');
       setMessage('Network error. Try again.');
     }
