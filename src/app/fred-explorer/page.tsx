@@ -227,7 +227,7 @@ export default function FredExplorerPage() {
   return (
     <main className="min-h-screen px-6 sm:px-8 md:px-12 lg:px-16 xl:px-24 py-10 space-y-8">
       <div>
-        <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">FReD Explorer (experimental - still has some minor bugs!!)</h1>
+        <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">FReD Explorer (experimental!)</h1>
         <p className="opacity-80">
           Data shown here are derived from the <a className="underline" href="https://forrt.org/apps/fred_explorer.html" target="_blank" rel="noreferrer">FReD replication dataset</a> as described in <a className="underline" href="https://openpsychologydata.metajnl.com/articles/10.5334/jopd.101" target="_blank" rel="noreferrer">Röseler et al., <em>Journal of Open Psychology Data</em>, 12: 8, pp. 1–23</a>.  Repository link: <a className="underline" href="https://osf.io/9r62x" target="_blank" rel="noreferrer">https://osf.io/9r62x</a> .
         </p>
