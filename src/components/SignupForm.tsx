@@ -26,7 +26,7 @@ export function SignupForm() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setStatus('error');
-        setMessage(data?.error || 'Subscription failed. Try again.');
+        setMessage(data?.error || data?.detail || 'Subscription failed. Try again.');
         return;
       }
       setStatus('success');

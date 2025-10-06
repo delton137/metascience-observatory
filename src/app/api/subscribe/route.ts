@@ -44,13 +44,32 @@ export async function POST(request: Request) {
       body: JSON.stringify({
         email_address: email,
         status_if_new: "pending", // send confirmation email for new subscribers
-        status: "pending", // re-initiate confirmation if previously unsubscribed
       }),
     });
 
     if (!upstream.ok) {
-      const detailText = await upstream.text();
-      return Response.json({ error: "Subscribe failed", detail: detailText?.slice(0, 500) }, { status: 400 });
+      let detail: unknown = undefined;
+      let title: string | undefined = undefined;
+      try {
+        const json = await upstream.json();
+        detail = (json && (json.detail || json.message)) ?? undefined;
+        title = json?.title;
+      } catch {
+        const text = await upstream.text();
+        detail = text?.slice(0, 500);
+      }
+
+      // Consider common states as non-fatal for UX
+      const benignTitles = new Set([
+        "Member Exists",
+        "Forgotten Email Not Subscribed",
+        "Member In Compliance State",
+      ]);
+      if (title && benignTitles.has(title)) {
+        return Response.json({ ok: true, note: title, detail });
+      }
+
+      return Response.json({ error: "Subscribe failed", detail }, { status: 400 });
     }
 
     return Response.json({ ok: true });
