@@ -20,7 +20,9 @@ async function getHomepage(): Promise<HomepageData | null> {
 export default async function Home() {
   const homepage = await getHomepage();
   const title = homepage?.title ?? "Metascience Observatory";
-  const subtitle = homepage?.subtitle ?? "(under construction).";
+  const subtitle =
+    homepage?.subtitle ??
+    "Is science healthy? How many papers are fake or fraudulent? How do rigor and reproducibility vary across fields, journals, and institutions?\n\nAt the Global Metascience Observatory we are using AI to analyze every scientific paper and help answer these questions and advance metascientific research.";
   return (
     <main className="min-h-screen">
       <section className="px-6 sm:px-8 md:px-12 lg:px-16 xl:px-24 py-20 md:py-28">
@@ -30,7 +32,7 @@ export default async function Home() {
           <div className="mt-8">
             <SignupForm />
           </div>
-          <p className="mt-3 text-sm text-black/60 dark:text-white/60">Get launch updates and early access.</p>
+          <p className="mt-3 text-sm text-black/60 dark:text-white/60">Subscribe to get notified when we launch.</p>
         </div>
       </section>
       <footer className="px-6 sm:px-8 md:px-12 lg:px-16 xl:px-24 py-10 text-sm text-black/60 dark:text-white/60">
