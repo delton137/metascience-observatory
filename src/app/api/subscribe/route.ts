@@ -14,8 +14,11 @@ export async function POST(request: Request) {
     const listId = process.env.MAILCHIMP_LIST_ID;
     let serverPrefix = process.env.MAILCHIMP_SERVER_PREFIX;
 
-    if (!apiKey || !listId) {
-      return Response.json({ error: "Server not configured" }, { status: 500 });
+    if (!apiKey) {
+      return Response.json({ error: "Missing MAILCHIMP_API_KEY" }, { status: 500 });
+    }
+    if (!listId) {
+      return Response.json({ error: "Missing MAILCHIMP_LIST_ID" }, { status: 500 });
     }
 
     if (!serverPrefix) {
@@ -23,7 +26,7 @@ export async function POST(request: Request) {
       if (suffix && /^[a-z]{2,}\d+$/i.test(suffix)) {
         serverPrefix = suffix;
       } else {
-        return Response.json({ error: "Server not configured" }, { status: 500 });
+        return Response.json({ error: "Missing MAILCHIMP_SERVER_PREFIX (and could not derive from MAILCHIMP_API_KEY)" }, { status: 500 });
       }
     }
 
