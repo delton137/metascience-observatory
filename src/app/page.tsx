@@ -37,8 +37,20 @@ export default async function Home() {
         </div>
         
       </section>
-      <footer className="px-6 sm:px-8 md:px-12 lg:px-16 xl:px-24 py-10 text-sm text-black/60 dark:text-white/60">
-        © {new Date().getFullYear()} Global Metascience Observatory
+      <footer className="px-6 sm:px-8 md:px-12 lg:px-16 xl:px-24 py-10 text-sm text-black/60 dark:text-white/60 flex items-center justify-between">
+        
+      <a
+          href="https://x.com/MetascienceObs"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 hover:underline"
+          aria-label="Follow us on X"
+        >
+          Follow us on X
+        </a>
+        
+        <span>© {new Date().getFullYear()} Global Metascience Observatory</span>
+       
       </footer>
     </main>
   );
