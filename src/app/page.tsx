@@ -41,13 +41,17 @@ export default async function Home() {
         
       <a
           href="https://x.com/MetascienceObs"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 hover:underline"
-          aria-label="Follow us on X"
         >
           Follow us on X
-        </a>
+        </a> 
+        and
+        <a
+          href="https://bsky.app/profile/metascienceobs.bsky.social"
+        >
+          Bluesky.
+        </a> 
+
+
         
         <span>© {new Date().getFullYear()} Global Metascience Observatory</span>
        
