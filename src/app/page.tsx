@@ -1,21 +1,7 @@
 import { SignupForm } from "@/components/SignupForm";
-import { sanityFetch } from "@/sanity/lib/live";
 
-type HomepageData = {
-  title?: string;
-};
-
-async function getHomepage(): Promise<HomepageData | null> {
-  const query = `*[_type == "homepage" && _id == "homepage"][0]{
-    title
-  }`;
-  const { data } = await sanityFetch({ query, params: {} });
-  return (data as HomepageData) || null;
-}
-
-export default async function Home() {
-  const homepage = await getHomepage();
-  const title = homepage?.title ?? "The Global Metascience Observatory";
+export default function Home() {
+  const title = "The Global Metascience Observatory";
   return (
     <main className="min-h-screen">
       <section className="px-6 sm:px-8 md:px-12 lg:px-16 xl:px-24 py-20 md:py-28">
@@ -26,7 +12,7 @@ export default async function Home() {
               Is science healthy? How many papers are fake or fraudulent? How do rigor and reproducibility vary across fields, journals, and institutions?
             </p>
             <p>
-              At the Global Metascience Observatory we are using AI to analyze every scientific paper to help answer these questions.
+              At the Global Metascience Observatory, we are using AI to analyze every scientific paper to help answer these questions.
             </p>
           </div>
           <div className="mt-8">

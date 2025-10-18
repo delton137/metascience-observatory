@@ -15,27 +15,27 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Metascience Observatory",
+  title: "The Global Metascience Observatory",
   description:
-    "Mapping rigor and reproducibility with AI. Research, data, and tools for better science.",
+    "Mapping rigor and reproducibility using AI. ",
   icons: {
     icon: "/globe.svg",
     shortcut: "/globe.svg",
     apple: "/globe.svg",
   },
   openGraph: {
-    title: "Metascience Observatory",
+    title: "The Global Metascience Observatory",
     description:
-      "Mapping rigor and reproducibility with AI. Research, data, and tools for better science.",
+      "Mapping rigor and reproducibility using AI. ",
     url: "https://metascienceobservatory.org",
-    siteName: "Metascience Observatory",
+    siteName: "The Global Metascience Observatory",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Metascience Observatory",
+    title: "The Global Metascience Observatory",
     description:
-      "Mapping rigor and reproducibility with AI. Research, data, and tools for better science.",
+      "Mapping rigor and reproducibility using AI.",
   },
 };
 
