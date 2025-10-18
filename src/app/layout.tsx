@@ -18,6 +18,11 @@ export const metadata: Metadata = {
   title: "Metascience Observatory",
   description:
     "Mapping rigor and reproducibility with AI. Research, data, and tools for better science.",
+  icons: {
+    icon: "/globe.svg",
+    shortcut: "/globe.svg",
+    apple: "/globe.svg",
+  },
   openGraph: {
     title: "Metascience Observatory",
     description:
@@ -40,10 +45,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body className={`antialiased`}>
         <SanityLive />
         <SiteNav />
         {children}
