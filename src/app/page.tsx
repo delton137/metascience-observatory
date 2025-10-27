@@ -12,14 +12,19 @@ export default function Home() {
               Is science healthy? How many papers are fake or fraudulent? How do rigor and reproducibility vary across fields, journals, and institutions?
             </p>
             <p>
-              At the Global Metascience Observatory, we are using AI to analyze every scientific paper to help answer these questions.
-            </p>
+              At the Global Metascience Observatory, we are using AI to analyze every scientific paper to help answer these questions. 
+              </p>
+              <p>
+              You can reach us at <img src="/ce.png" alt="Contact email" className="inline h-5 align-text-bottom" />. 
+              </p>
           </div>
           <div className="mt-8">
             <SignupForm />
           </div>
           <p className="mt-3 text-sm">Subscribe to get notified when we launch.</p>
           <p className="mt-3 text-sm text-black/85 dark:text-white/70">In the meantime, <a href="/fred-explorer" className="underline">check out this experimental interface</a> for the existing FReD Replication Database.</p>
+       
+
         </div>
         
       </section>
