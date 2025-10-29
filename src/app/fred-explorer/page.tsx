@@ -7,7 +7,6 @@ type AnyRecord = Record<string, unknown>;
 type FredResponse = {
   columns: string[];
   rows: AnyRecord[];
-  dictionary: Record<string, string>;
 };
 
 type Option = { value: string; label: string };

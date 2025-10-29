@@ -8,7 +8,6 @@ export const runtime = "nodejs";
 type AnyRecord = Record<string, unknown>;
 
 let cachedData: { rows: AnyRecord[]; columns: string[] } | null = null;
-let cachedDict: Record<string, string> | null = null;
 
 function toNumber(value: unknown): number | null {
   if (value == null) return null;
@@ -29,33 +28,6 @@ function normalizeEffectSigns(row: AnyRecord): void {
   }
 }
 
-function dedupeRows(rows: AnyRecord[]): AnyRecord[] {
-  const byKey = new Map<string, AnyRecord>();
-  for (const r of rows) {
-    const osf = String(r.osf_link ?? "").trim().toLowerCase();
-    const desc = String(r.description ?? "").trim().toLowerCase().replace(/\s+/g, " ");
-    const key = `${osf}|${desc}`;
-    const existing = byKey.get(key);
-    if (!existing) {
-      byKey.set(key, r);
-      continue;
-    }
-    // Prefer row with larger replication N; fallback to larger original N
-    const nRepNew = toNumber(r.n_replication) ?? -1;
-    const nRepOld = toNumber(existing.n_replication) ?? -1;
-    if (nRepNew > nRepOld) {
-      byKey.set(key, r);
-      continue;
-    }
-    if (nRepNew === nRepOld) {
-      const nONew = toNumber(r.n_original) ?? -1;
-      const nOld = toNumber(existing.n_original) ?? -1;
-      if (nONew > nOld) byKey.set(key, r);
-    }
-  }
-  return Array.from(byKey.values());
-}
-
 async function loadCsv(filePath: string): Promise<{ rows: AnyRecord[]; columns: string[] }> {
   const csvText = await fs.readFile(filePath, "utf8");
   const rows = csvParse(csvText);
@@ -74,23 +46,9 @@ async function loadCsv(filePath: string): Promise<{ rows: AnyRecord[]; columns: 
     const eR = Number(String(r.es_replication ?? "").trim());
     return Number.isFinite(eO) && Number.isFinite(eR);
   });
-  // Normalize effect signs (original positive) and deduplicate
+  // Normalize effect signs (original positive)
   for (const r of filtered) normalizeEffectSigns(r);
-  const deduped = dedupeRows(filtered);
-  return { rows: deduped, columns };
-}
-
-async function loadDictionary(filePath: string): Promise<Record<string, string>> {
-  const csvText = await fs.readFile(filePath, "utf8");
-  const rows = csvParse(csvText) as unknown as Array<{ Variable?: string; Description?: string }>;
-  const dict: Record<string, string> = {};
-  for (const r of rows) {
-    const key = (r.Variable || "").trim();
-    if (!key) continue;
-    const value = (r.Description || "").trim();
-    dict[key] = value;
-  }
-  return dict;
+  return { rows: filtered, columns };
 }
 
 export async function GET() {
@@ -99,15 +57,10 @@ export async function GET() {
       const dataPath = path.join(process.cwd(), "data", "fred_data.csv");
       cachedData = await loadCsv(dataPath);
     }
-    if (!cachedDict) {
-      const dictPath = path.join(process.cwd(), "data", "fred_data_dictionary.csv");
-      cachedDict = await loadDictionary(dictPath);
-    }
 
     return NextResponse.json({
       columns: cachedData.columns,
       rows: cachedData.rows,
-      dictionary: cachedDict,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

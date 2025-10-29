@@ -1,7 +1,7 @@
 import { SignupForm } from "@/components/SignupForm";
 
 export default function Home() {
-  const title = "The Global Metascience Observatory";
+  const title = "The Metascience Observatory";
   return (
     <main className="min-h-screen">
       <section className="px-6 sm:px-8 md:px-12 lg:px-16 xl:px-24 py-20 md:py-28">
@@ -28,37 +28,48 @@ export default function Home() {
         </div>
         
       </section>
-      <footer className="px-6 sm:px-8 md:px-12 lg:px-16 xl:px-24 py-10 text-sm text-black/60 dark:text-white/60 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <a
-            href="https://x.com/MetascienceObs"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="X (Twitter)"
-            className="inline-flex"
-          >
-            <img src="/socials/X_logo.svg" alt="X logo" className="h-6 w-6 object-contain" />
-          </a>
-          <a
-            href="https://bsky.app/profile/metascienceobs.bsky.social"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Bluesky"
-            className="inline-flex"
-          >
-            <img src="/socials/Bluesky_logo.svg" alt="Bluesky logo" className="h-5 w-5 object-contain" />
-          </a>
-          <a
-            href="https://www.linkedin.com/company/metascience-observatory/"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="LinkedIn"
-            className="inline-flex"
-          >
-            <img src="/socials/LinkedIn_logo.svg" alt="LinkedIn logo" className="h-6 w-6 object-contain" />
-          </a>
+      <footer className="px-6 sm:px-8 md:px-12 lg:px-16 xl:px-24 py-10 text-sm text-black/60 dark:text-white/60">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-4">
+            <a
+              href="https://x.com/MetascienceObs"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="X (Twitter)"
+              className="inline-flex"
+            >
+              <img src="/socials/X_logo.svg" alt="X logo" className="h-6 w-6 object-contain" />
+            </a>
+            <a
+              href="https://bsky.app/profile/metascienceobs.bsky.social"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Bluesky"
+              className="inline-flex"
+            >
+              <img src="/socials/Bluesky_logo.svg" alt="Bluesky logo" className="h-5 w-5 object-contain" />
+            </a>
+            <a
+              href="https://www.linkedin.com/company/metascience-observatory/"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="LinkedIn"
+              className="inline-flex"
+            >
+              <img src="/socials/LinkedIn_logo.svg" alt="LinkedIn logo" className="h-6 w-6 object-contain" />
+            </a>
+          </div>
+          <span>© {new Date().getFullYear()} The Metascience Observatory</span>
         </div>
-        <span>© {new Date().getFullYear()} The Global Metascience Observatory</span>
+        <div className="text-center">
+          <p>
+            The Metascience Observatory is a fiscally sponsored initiative of the{" "}
+            <a href="http://mindfirst.foundation/" target="_blank" rel="noopener noreferrer" className="underline">
+              Mind First Foundation
+            </a>
+            , a 501c3 nonprofit based in Massachusetts.
+          </p>
+        </div>
       </footer>
     </main>
   );
