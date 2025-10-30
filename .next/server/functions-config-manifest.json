@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "functions": {
+    "/api/subscribe": {},
+    "/api/fred": {},
+    "/api/retraction-watch": {}
+  }
+}
