@@ -61,6 +61,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@types/d3-dsv": "^3.0.5",
     "@types/node": "24.9.2",
     "autoprefixer": "^10.4.21",
     "postcss": "^8.5.6",

@@ -1,4 +1,4 @@
-# Rigor Radar — Next.js App
+# The Metascience Observatory — Next.js App
 
 ## Run locally
 ```bash
