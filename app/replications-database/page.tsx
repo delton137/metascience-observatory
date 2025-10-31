@@ -104,6 +104,73 @@ function extractDoiFromRef(ref: string): string | null {
   return m ? m[0] : null;
 }
 
+type ColumnKey = 
+  | "index"
+  | "original_citation_html"
+  | "replication_citation_html"
+  | "description"
+  | "discipline"
+  | "result"
+  | "original_n"
+  | "replication_n"
+  | "original_es_r"
+  | "replication_es_r"
+  | "original_es_type"
+  | "replication_es_type"
+  | "original_authors"
+  | "replication_authors"
+  | "original_title"
+  | "replication_title"
+  | "original_journal"
+  | "replication_journal"
+  | "original_year"
+  | "replication_year"
+  | "original_doi"
+  | "replication_doi"
+  | "tags"
+  | "human_validated";
+
+const ALL_COLUMNS: Array<{ key: ColumnKey; label: string }> = [
+  { key: "index", label: "#" },
+  { key: "original_citation_html", label: "Original publication" },
+  { key: "replication_citation_html", label: "Replication publication" },
+  { key: "description", label: "Description" },
+  { key: "discipline", label: "Discipline" },
+  { key: "result", label: "Result" },
+  { key: "original_n", label: "N (orig)" },
+  { key: "replication_n", label: "N (rep)" },
+  { key: "original_es_r", label: "ES (orig)" },
+  { key: "replication_es_r", label: "ES (rep)" },
+  { key: "original_es_type", label: "ES type (orig)" },
+  { key: "replication_es_type", label: "ES type (rep)" },
+  { key: "original_authors", label: "Original authors" },
+  { key: "replication_authors", label: "Replication authors" },
+  { key: "original_title", label: "Original title" },
+  { key: "replication_title", label: "Replication title" },
+  { key: "original_journal", label: "Original journal" },
+  { key: "replication_journal", label: "Replication journal" },
+  { key: "original_year", label: "Original year" },
+  { key: "replication_year", label: "Replication year" },
+  { key: "original_doi", label: "Original DOI" },
+  { key: "replication_doi", label: "Replication DOI" },
+  { key: "tags", label: "Tags" },
+  { key: "human_validated", label: "Human Validated" },
+];
+
+const DEFAULT_COLUMNS: ColumnKey[] = [
+  "index",
+  "original_citation_html",
+  "replication_citation_html",
+  "description",
+  "discipline",
+  "result",
+  "original_n",
+  "replication_n",
+  "original_es_r",
+  "replication_es_r",
+  "human_validated",
+];
+
 export default function ReplicationsDatabasePage() {
   const [data, setData] = useState<FredResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -112,6 +179,10 @@ export default function ReplicationsDatabasePage() {
   const [discipline, setDiscipline] = useState<string>("");
   const [result, setResult] = useState<string>("");
   const [search, setSearch] = useState<string>("");
+  const [visibleColumns, setVisibleColumns] = useState<Set<ColumnKey>>(
+    new Set(DEFAULT_COLUMNS)
+  );
+  const [showColumnSelector, setShowColumnSelector] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -286,23 +357,91 @@ export default function ReplicationsDatabasePage() {
       </section>
 
       <section className="mx-auto max-w-[90%] border rounded mt-6">
+        <div className="p-2 border-b flex items-center justify-between">
+          <h3 className="font-medium">Data Table</h3>
+          <div className="relative">
+            <button
+              onClick={() => setShowColumnSelector(!showColumnSelector)}
+              className="px-3 py-1 text-sm border rounded hover:bg-black/5 dark:hover:bg-white/5"
+            >
+              Columns ({visibleColumns.size})
+            </button>
+            {showColumnSelector && (
+              <>
+                <div 
+                  className="fixed inset-0 z-10" 
+                  onClick={() => setShowColumnSelector(false)}
+                />
+                <div className="absolute right-0 mt-2 w-64 bg-background border rounded shadow-lg z-20 p-3 max-h-96 overflow-y-auto">
+                  <div className="mb-2 text-xs font-semibold opacity-70">Select columns to display</div>
+                  {ALL_COLUMNS.map((col) => (
+                    <label key={col.key} className="flex items-center gap-2 p-1 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={visibleColumns.has(col.key)}
+                        onChange={(e) => {
+                          const newSet = new Set(visibleColumns);
+                          if (e.target.checked) {
+                            newSet.add(col.key);
+                          } else {
+                            newSet.delete(col.key);
+                          }
+                          setVisibleColumns(newSet);
+                        }}
+                        className="cursor-pointer"
+                      />
+                      <span className="text-sm">{col.label}</span>
+                    </label>
+                  ))}
+                  <div className="mt-2 pt-2 border-t flex gap-2">
+                    <button
+                      onClick={() => setVisibleColumns(new Set(DEFAULT_COLUMNS))}
+                      className="text-xs px-2 py-1 border rounded hover:bg-black/5 dark:hover:bg-white/5"
+                    >
+                      Reset
+                    </button>
+                    <button
+                      onClick={() => setVisibleColumns(new Set(ALL_COLUMNS.map(c => c.key)))}
+                      className="text-xs px-2 py-1 border rounded hover:bg-black/5 dark:hover:bg-white/5"
+                    >
+                      Select All
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
         <div className="overflow-x-auto overflow-y-auto h-[calc(100vh-400px)] max-h-[600px]">
           <table className="w-full text-sm">
             <thead className="sticky top-0 z-10">
               <tr className="border-b bg-background dark:bg-background">
-                <th className="text-right p-2">#</th>
-                <th className="text-left p-2">Original publication</th>
-                <th className="text-left p-2">Replication publication</th>
-                <th className="text-left p-2">Description</th>
-                <th className="text-left p-2">Discipline</th>
-                <th className="text-left p-2">Result</th>
-                <th className="text-right p-2">N (orig)</th>
-                <th className="text-right p-2">N (rep)</th>
-                <th className="text-right p-2">ES (orig)</th>
-                <th className="text-right p-2">ES (rep)</th>
-                <th className="text-right p-2">r(orig)</th>
-                <th className="text-right p-2">r(rep)</th>
-                <th className="text-left p-2">Human Validated</th>
+                {visibleColumns.has("index") && <th className="text-right p-2">#</th>}
+                {visibleColumns.has("original_citation_html") && <th className="text-left p-2">Original publication</th>}
+                {visibleColumns.has("replication_citation_html") && <th className="text-left p-2">Replication publication</th>}
+                {visibleColumns.has("description") && <th className="text-left p-2">Description</th>}
+                {visibleColumns.has("discipline") && <th className="text-left p-2">Discipline</th>}
+                {visibleColumns.has("result") && <th className="text-left p-2">Result</th>}
+                {visibleColumns.has("original_n") && <th className="text-right p-2">N (orig)</th>}
+                {visibleColumns.has("replication_n") && <th className="text-right p-2">N (rep)</th>}
+                {visibleColumns.has("original_es_r") && <th className="text-right p-2">ES (orig)</th>}
+                {visibleColumns.has("replication_es_r") && <th className="text-right p-2">ES (rep)</th>}
+                {visibleColumns.has("original_es_r") && <th className="text-right p-2">r(orig)</th>}
+                {visibleColumns.has("replication_es_r") && <th className="text-right p-2">r(rep)</th>}
+                {visibleColumns.has("original_es_type") && <th className="text-right p-2">ES type (orig)</th>}
+                {visibleColumns.has("replication_es_type") && <th className="text-right p-2">ES type (rep)</th>}
+                {visibleColumns.has("original_authors") && <th className="text-left p-2">Original authors</th>}
+                {visibleColumns.has("replication_authors") && <th className="text-left p-2">Replication authors</th>}
+                {visibleColumns.has("original_title") && <th className="text-left p-2">Original title</th>}
+                {visibleColumns.has("replication_title") && <th className="text-left p-2">Replication title</th>}
+                {visibleColumns.has("original_journal") && <th className="text-left p-2">Original journal</th>}
+                {visibleColumns.has("replication_journal") && <th className="text-left p-2">Replication journal</th>}
+                {visibleColumns.has("original_year") && <th className="text-right p-2">Original year</th>}
+                {visibleColumns.has("replication_year") && <th className="text-right p-2">Replication year</th>}
+                {visibleColumns.has("original_doi") && <th className="text-left p-2">Original DOI</th>}
+                {visibleColumns.has("replication_doi") && <th className="text-left p-2">Replication DOI</th>}
+                {visibleColumns.has("tags") && <th className="text-left p-2">Tags</th>}
+                {visibleColumns.has("human_validated") && <th className="text-left p-2">Human Validated</th>}
               </tr>
             </thead>
             <tbody>
@@ -324,39 +463,104 @@ export default function ReplicationsDatabasePage() {
                 const citationR = String(r.replication_citation_html || "");
                 return (
                   <tr key={i} className="border-b hover:bg-black/5 dark:hover:bg-white/5">
-                    <td className="align-top p-2 text-right">{i + 1}</td>
-                    <td className="align-top p-2" style={{ width: 240 }}>
-                      {citationO ? (
-                        <span dangerouslySetInnerHTML={{ __html: citationO }} />
-                      ) : (
-                        <span className="opacity-80">—</span>
-                      )}
-                    </td>
-                    <td className="align-top p-2" style={{ width: 240 }}>
-                      {citationR ? (
-                        <span dangerouslySetInnerHTML={{ __html: citationR }} />
-                      ) : (
-                        <span className="opacity-80">—</span>
-                      )}
-                    </td>
-                    <td className="align-top p-2">
-                      <div className="font-medium">{String(r.description || r.tags || "—")}</div>
-                    </td>
-                    <td className="align-top p-2">{String(r.discipline || "")}</td>
-                    <td className="align-top p-2">{String(r.result || "")}</td>
-                    <td className="align-top p-2 text-right">{nO != null ? nO : ""}</td>
-                    <td className="align-top p-2 text-right">{nR != null ? nR : ""}</td>
-                    <td className="align-top p-2 text-right">{eO != null ? `${formatSig4(eO)}${esOType ? ` ${esOType}` : ""}` : ""}</td>
-                    <td className="align-top p-2 text-right">{eR != null ? `${formatSig4(eR)}${esRType ? ` ${esRType}` : ""}` : ""}</td>
-                    <td className="align-top p-2 text-right">{eO != null ? formatSig4(eO) : ""}</td>
-                    <td className="align-top p-2 text-right">{eR != null ? formatSig4(eR) : ""}</td>
-                    <td className="align-top p-2">{String(r.human_validated || "")}</td>
+                    {visibleColumns.has("index") && (
+                      <td className="align-top p-2 text-right">{i + 1}</td>
+                    )}
+                    {visibleColumns.has("original_citation_html") && (
+                      <td className="align-top p-2" style={{ width: 240 }}>
+                        {citationO ? (
+                          <span dangerouslySetInnerHTML={{ __html: citationO }} />
+                        ) : (
+                          <span className="opacity-80">—</span>
+                        )}
+                      </td>
+                    )}
+                    {visibleColumns.has("replication_citation_html") && (
+                      <td className="align-top p-2" style={{ width: 240 }}>
+                        {citationR ? (
+                          <span dangerouslySetInnerHTML={{ __html: citationR }} />
+                        ) : (
+                          <span className="opacity-80">—</span>
+                        )}
+                      </td>
+                    )}
+                    {visibleColumns.has("description") && (
+                      <td className="align-top p-2">
+                        <div className="font-medium">{String(r.description || r.tags || "—")}</div>
+                      </td>
+                    )}
+                    {visibleColumns.has("discipline") && (
+                      <td className="align-top p-2">{String(r.discipline || "")}</td>
+                    )}
+                    {visibleColumns.has("result") && (
+                      <td className="align-top p-2">{String(r.result || "")}</td>
+                    )}
+                    {visibleColumns.has("original_n") && (
+                      <td className="align-top p-2 text-right">{nO != null ? nO : ""}</td>
+                    )}
+                    {visibleColumns.has("replication_n") && (
+                      <td className="align-top p-2 text-right">{nR != null ? nR : ""}</td>
+                    )}
+                    {visibleColumns.has("original_es_r") && (
+                      <td className="align-top p-2 text-right">{eO != null ? `${formatSig4(eO)}${esOType ? ` ${esOType}` : ""}` : ""}</td>
+                    )}
+                    {visibleColumns.has("replication_es_r") && (
+                      <td className="align-top p-2 text-right">{eR != null ? `${formatSig4(eR)}${esRType ? ` ${esRType}` : ""}` : ""}</td>
+                    )}
+                    {visibleColumns.has("original_es_r") && (
+                      <td className="align-top p-2 text-right">{eO != null ? formatSig4(eO) : ""}</td>
+                    )}
+                    {visibleColumns.has("replication_es_r") && (
+                      <td className="align-top p-2 text-right">{eR != null ? formatSig4(eR) : ""}</td>
+                    )}
+                    {visibleColumns.has("original_es_type") && (
+                      <td className="align-top p-2 text-right">{esOType || ""}</td>
+                    )}
+                    {visibleColumns.has("replication_es_type") && (
+                      <td className="align-top p-2 text-right">{esRType || ""}</td>
+                    )}
+                    {visibleColumns.has("original_authors") && (
+                      <td className="align-top p-2">{String(r.original_authors || "")}</td>
+                    )}
+                    {visibleColumns.has("replication_authors") && (
+                      <td className="align-top p-2">{String(r.replication_authors || "")}</td>
+                    )}
+                    {visibleColumns.has("original_title") && (
+                      <td className="align-top p-2">{String(r.original_title || "")}</td>
+                    )}
+                    {visibleColumns.has("replication_title") && (
+                      <td className="align-top p-2">{String(r.replication_title || "")}</td>
+                    )}
+                    {visibleColumns.has("original_journal") && (
+                      <td className="align-top p-2">{String(r.original_journal || "")}</td>
+                    )}
+                    {visibleColumns.has("replication_journal") && (
+                      <td className="align-top p-2">{String(r.replication_journal || "")}</td>
+                    )}
+                    {visibleColumns.has("original_year") && (
+                      <td className="align-top p-2 text-right">{String(r.original_year || "")}</td>
+                    )}
+                    {visibleColumns.has("replication_year") && (
+                      <td className="align-top p-2 text-right">{String(r.replication_year || "")}</td>
+                    )}
+                    {visibleColumns.has("original_doi") && (
+                      <td className="align-top p-2">{String(r.original_doi || "")}</td>
+                    )}
+                    {visibleColumns.has("replication_doi") && (
+                      <td className="align-top p-2">{String(r.replication_doi || "")}</td>
+                    )}
+                    {visibleColumns.has("tags") && (
+                      <td className="align-top p-2">{String(r.tags || "")}</td>
+                    )}
+                    {visibleColumns.has("human_validated") && (
+                      <td className="align-top p-2">{String(r.human_validated || "")}</td>
+                    )}
                   </tr>
                 );
               })}
               {filteredRows.length === 0 && (
                 <tr>
-                  <td colSpan={13} className="p-6 text-center opacity-70">No rows</td>
+                  <td colSpan={visibleColumns.size} className="p-6 text-center opacity-70">No rows</td>
                 </tr>
               )}
             </tbody>
