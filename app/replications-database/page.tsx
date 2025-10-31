@@ -302,6 +302,7 @@ export default function ReplicationsDatabasePage() {
                 <th className="text-right p-2">ES (rep)</th>
                 <th className="text-right p-2">r(orig)</th>
                 <th className="text-right p-2">r(rep)</th>
+                <th className="text-left p-2">Human Validated</th>
               </tr>
             </thead>
             <tbody>
@@ -349,12 +350,13 @@ export default function ReplicationsDatabasePage() {
                     <td className="align-top p-2 text-right">{eR != null ? `${formatSig4(eR)}${esRType ? ` ${esRType}` : ""}` : ""}</td>
                     <td className="align-top p-2 text-right">{eO != null ? formatSig4(eO) : ""}</td>
                     <td className="align-top p-2 text-right">{eR != null ? formatSig4(eR) : ""}</td>
+                    <td className="align-top p-2">{String(r.human_validated || "")}</td>
                   </tr>
                 );
               })}
               {filteredRows.length === 0 && (
                 <tr>
-                  <td colSpan={12} className="p-6 text-center opacity-70">No rows</td>
+                  <td colSpan={13} className="p-6 text-center opacity-70">No rows</td>
                 </tr>
               )}
             </tbody>
