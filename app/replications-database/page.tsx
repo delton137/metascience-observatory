@@ -123,12 +123,19 @@ type ColumnKey =
   | "replication_title"
   | "original_journal"
   | "replication_journal"
+  | "original_volume"
+  | "replication_volume"
+  | "original_issue"
+  | "replication_issue"
+  | "original_pages"
+  | "replication_pages"
   | "original_year"
   | "replication_year"
   | "original_doi"
   | "replication_doi"
   | "tags"
-  | "human_validated";
+  | "validated"
+  | "validated_person";
 
 const ALL_COLUMNS: Array<{ key: ColumnKey; label: string }> = [
   { key: "index", label: "#" },
@@ -149,12 +156,19 @@ const ALL_COLUMNS: Array<{ key: ColumnKey; label: string }> = [
   { key: "replication_title", label: "Replication title" },
   { key: "original_journal", label: "Original journal" },
   { key: "replication_journal", label: "Replication journal" },
+  { key: "original_volume", label: "Original volume" },
+  { key: "replication_volume", label: "Replication volume" },
+  { key: "original_issue", label: "Original issue" },
+  { key: "replication_issue", label: "Replication issue" },
+  { key: "original_pages", label: "Original pages" },
+  { key: "replication_pages", label: "Replication pages" },
   { key: "original_year", label: "Original year" },
   { key: "replication_year", label: "Replication year" },
   { key: "original_doi", label: "Original DOI" },
   { key: "replication_doi", label: "Replication DOI" },
   { key: "tags", label: "Tags" },
-  { key: "human_validated", label: "Human Validated" },
+  { key: "validated", label: "Human Validated" },
+  { key: "validated_person", label: "Validated Person" },
 ];
 
 const DEFAULT_COLUMNS: ColumnKey[] = [
@@ -168,7 +182,7 @@ const DEFAULT_COLUMNS: ColumnKey[] = [
   "replication_n",
   "original_es_r",
   "replication_es_r",
-  "human_validated",
+  "validated",
 ];
 
 export default function ReplicationsDatabasePage() {
@@ -436,12 +450,19 @@ export default function ReplicationsDatabasePage() {
                 {visibleColumns.has("replication_title") && <th className="text-left p-2">Replication title</th>}
                 {visibleColumns.has("original_journal") && <th className="text-left p-2">Original journal</th>}
                 {visibleColumns.has("replication_journal") && <th className="text-left p-2">Replication journal</th>}
+                {visibleColumns.has("original_volume") && <th className="text-right p-2">Original volume</th>}
+                {visibleColumns.has("replication_volume") && <th className="text-right p-2">Replication volume</th>}
+                {visibleColumns.has("original_issue") && <th className="text-left p-2">Original issue</th>}
+                {visibleColumns.has("replication_issue") && <th className="text-left p-2">Replication issue</th>}
+                {visibleColumns.has("original_pages") && <th className="text-left p-2">Original pages</th>}
+                {visibleColumns.has("replication_pages") && <th className="text-left p-2">Replication pages</th>}
                 {visibleColumns.has("original_year") && <th className="text-right p-2">Original year</th>}
                 {visibleColumns.has("replication_year") && <th className="text-right p-2">Replication year</th>}
                 {visibleColumns.has("original_doi") && <th className="text-left p-2">Original DOI</th>}
                 {visibleColumns.has("replication_doi") && <th className="text-left p-2">Replication DOI</th>}
                 {visibleColumns.has("tags") && <th className="text-left p-2">Tags</th>}
-                {visibleColumns.has("human_validated") && <th className="text-left p-2">Human Validated</th>}
+                {visibleColumns.has("validated") && <th className="text-left p-2">Human Validated</th>}
+                {visibleColumns.has("validated_person") && <th className="text-left p-2">Validated Person</th>}
               </tr>
             </thead>
             <tbody>
@@ -452,6 +473,8 @@ export default function ReplicationsDatabasePage() {
                 const origESVal = r.original_es_r ?? r.es_original;
                 const repESVal = r.replication_es_r ?? r.es_replication;
                 
+                // Only convert to number if value exists and is not empty
+                // Don't convert "0" strings if they represent missing data (empty in CSV = missing)
                 const nO = origNVal != null && String(origNVal).trim() !== "" ? toNumber(origNVal) : null;
                 const nR = repNVal != null && String(repNVal).trim() !== "" ? toNumber(repNVal) : null;
                 const eO = origESVal != null && String(origESVal).trim() !== "" ? toNumber(origESVal) : null;
@@ -464,36 +487,36 @@ export default function ReplicationsDatabasePage() {
                 return (
                   <tr key={i} className="border-b hover:bg-black/5 dark:hover:bg-white/5">
                     {visibleColumns.has("index") && (
-                      <td className="align-top p-2 text-right">{i + 1}</td>
+                    <td className="align-top p-2 text-right">{i + 1}</td>
                     )}
                     {visibleColumns.has("original_citation_html") && (
-                      <td className="align-top p-2" style={{ width: 240 }}>
+                    <td className="align-top p-2" style={{ width: 240 }}>
                         {citationO ? (
                           <span dangerouslySetInnerHTML={{ __html: citationO }} />
                         ) : (
                           <span className="opacity-80">—</span>
-                        )}
-                      </td>
+                      )}
+                    </td>
                     )}
                     {visibleColumns.has("replication_citation_html") && (
-                      <td className="align-top p-2" style={{ width: 240 }}>
+                    <td className="align-top p-2" style={{ width: 240 }}>
                         {citationR ? (
                           <span dangerouslySetInnerHTML={{ __html: citationR }} />
                         ) : (
                           <span className="opacity-80">—</span>
-                        )}
-                      </td>
+                      )}
+                    </td>
                     )}
                     {visibleColumns.has("description") && (
-                      <td className="align-top p-2">
-                        <div className="font-medium">{String(r.description || r.tags || "—")}</div>
-                      </td>
+                    <td className="align-top p-2">
+                      <div className="font-medium">{String(r.description || r.tags || "—")}</div>
+                    </td>
                     )}
                     {visibleColumns.has("discipline") && (
-                      <td className="align-top p-2">{String(r.discipline || "")}</td>
+                    <td className="align-top p-2">{String(r.discipline || "")}</td>
                     )}
                     {visibleColumns.has("result") && (
-                      <td className="align-top p-2">{String(r.result || "")}</td>
+                    <td className="align-top p-2">{String(r.result || "")}</td>
                     )}
                     {visibleColumns.has("original_n") && (
                       <td className="align-top p-2 text-right">{nO != null ? nO : ""}</td>
@@ -537,6 +560,24 @@ export default function ReplicationsDatabasePage() {
                     {visibleColumns.has("replication_journal") && (
                       <td className="align-top p-2">{String(r.replication_journal || "")}</td>
                     )}
+                    {visibleColumns.has("original_volume") && (
+                      <td className="align-top p-2 text-right">{String(r.original_volume || "")}</td>
+                    )}
+                    {visibleColumns.has("replication_volume") && (
+                      <td className="align-top p-2 text-right">{String(r.replication_volume || "")}</td>
+                    )}
+                    {visibleColumns.has("original_issue") && (
+                      <td className="align-top p-2">{String(r.original_issue || "")}</td>
+                    )}
+                    {visibleColumns.has("replication_issue") && (
+                      <td className="align-top p-2">{String(r.replication_issue || "")}</td>
+                    )}
+                    {visibleColumns.has("original_pages") && (
+                      <td className="align-top p-2">{String(r.original_pages || "")}</td>
+                    )}
+                    {visibleColumns.has("replication_pages") && (
+                      <td className="align-top p-2">{String(r.replication_pages || "")}</td>
+                    )}
                     {visibleColumns.has("original_year") && (
                       <td className="align-top p-2 text-right">{String(r.original_year || "")}</td>
                     )}
@@ -552,8 +593,11 @@ export default function ReplicationsDatabasePage() {
                     {visibleColumns.has("tags") && (
                       <td className="align-top p-2">{String(r.tags || "")}</td>
                     )}
-                    {visibleColumns.has("human_validated") && (
-                      <td className="align-top p-2">{String(r.human_validated || "")}</td>
+                    {visibleColumns.has("validated") && (
+                      <td className="align-top p-2">{String(r.validated || "")}</td>
+                    )}
+                    {visibleColumns.has("validated_person") && (
+                      <td className="align-top p-2">{String(r.validated_person || "")}</td>
                     )}
                   </tr>
                 );
