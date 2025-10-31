@@ -141,7 +141,7 @@ const ALL_COLUMNS: Array<{ key: ColumnKey; label: string }> = [
   { key: "index", label: "#" },
   { key: "original_citation_html", label: "Original publication" },
   { key: "replication_citation_html", label: "Replication publication" },
-  { key: "description", label: "Description" },
+  { key: "description", label: "Description of the original effect" },
   { key: "discipline", label: "Discipline" },
   { key: "result", label: "Result" },
   { key: "original_n", label: "N (orig)" },
@@ -433,7 +433,7 @@ export default function ReplicationsDatabasePage() {
                 {visibleColumns.has("index") && <th className="text-right p-2">#</th>}
                 {visibleColumns.has("original_citation_html") && <th className="text-left p-2">Original publication</th>}
                 {visibleColumns.has("replication_citation_html") && <th className="text-left p-2">Replication publication</th>}
-                {visibleColumns.has("description") && <th className="text-left p-2">Description</th>}
+                {visibleColumns.has("description") && <th className="text-left p-2">Description of the original effect</th>}
                 {visibleColumns.has("discipline") && <th className="text-left p-2">Discipline</th>}
                 {visibleColumns.has("result") && <th className="text-left p-2">Result</th>}
                 {visibleColumns.has("original_n") && <th className="text-right p-2">N (orig)</th>}
