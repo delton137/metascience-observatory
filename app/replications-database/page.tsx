@@ -162,13 +162,13 @@ export default function ReplicationsDatabasePage() {
       if (result && String(r.result ?? "") !== result) return false;
       if (search) {
         const s = search.toLowerCase();
-        const hay = `${r.description ?? ""} ${r.tags ?? ""} ${r.ref_original ?? ""} ${r.ref_replication ?? ""}`.toLowerCase();
+        const hay = `${r.description ?? ""} ${r.tags ?? ""} ${r.original_citation_html ?? ""} ${r.replication_citation_html ?? ""}`.toLowerCase();
         if (!hay.includes(s)) return false;
       }
-      const nO = toNumber(r.n_original);
-      const nR = toNumber(r.n_replication);
-      const eO = toNumber(r.es_original);
-      const eR = toNumber(r.es_replication);
+      const nO = toNumber(r.original_n ?? r.n_original);
+      const nR = toNumber(r.replication_n ?? r.n_replication);
+      const eO = toNumber(r.original_es_r ?? r.es_original);
+      const eR = toNumber(r.replication_es_r ?? r.es_replication);
       if (nO == null || nR == null || eO == null || eR == null) return false;
       return true;
     });
@@ -181,9 +181,9 @@ export default function ReplicationsDatabasePage() {
     let inconclusive = 0;
     for (const r of filteredRows) {
       const res = String(r.result ?? "").trim().toLowerCase();
-      if (res.includes("success")) success++;
-      else if (res.includes("failure") || res.includes("reversal")) failure++;
-      else inconclusive++;
+      if (res === "success") success++;
+      else if (res === "failure") failure++;
+      else inconclusive++; // Includes "inconclusive" and any other/empty values
     }
     const pct = (v: number) => (n > 0 ? Math.round((v / n) * 1000) / 10 : 0);
     return { n, success, failure, inconclusive, pctSuccess: pct(success), pctFailure: pct(failure), pctInconclusive: pct(inconclusive) };
@@ -286,18 +286,18 @@ export default function ReplicationsDatabasePage() {
       </section>
 
       <section className="mx-auto max-w-[90%] border rounded mt-6">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto overflow-y-auto h-[calc(100vh-400px)] max-h-[600px]">
           <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b bg-black/5 dark:bg-white/5">
+            <thead className="sticky top-0 z-10">
+              <tr className="border-b bg-background dark:bg-background">
                 <th className="text-right p-2">#</th>
                 <th className="text-left p-2">Original publication</th>
                 <th className="text-left p-2">Replication publication</th>
                 <th className="text-left p-2">Description</th>
                 <th className="text-left p-2">Discipline</th>
                 <th className="text-left p-2">Result</th>
-                <th className="text-right p-2">n (orig)</th>
-                <th className="text-right p-2">n (rep)</th>
+                <th className="text-right p-2">N (orig)</th>
+                <th className="text-right p-2">N (rep)</th>
                 <th className="text-right p-2">ES (orig)</th>
                 <th className="text-right p-2">ES (rep)</th>
                 <th className="text-right p-2">r(orig)</th>
@@ -306,58 +306,49 @@ export default function ReplicationsDatabasePage() {
             </thead>
             <tbody>
               {filteredRows.slice(0, 2000).map((r, i) => {
-                const nO = toNumber(r.n_original);
-                const nR = toNumber(r.n_replication);
-                const eO = toNumber(r.es_original);
-                const eR = toNumber(r.es_replication);
-                const esOVal = r.es_orig_value as number | string | undefined;
-                const esOType = r.es_orig_estype as string | undefined;
-                const esRVal = r.es_rep_value as number | string | undefined;
-                const esRType = r.es_rep_estype as string | undefined;
-                const refO = String(r.ref_original || "");
-                const refR = String(r.ref_replication || "");
-                const parsedO = parseApaRef(refO);
-                const parsedR = parseApaRef(refR);
-                const journalO = String(r.orig_journal || parsedO.journal || "");
-                const doiO = toDoiUrl(r.doi_original) || extractDoiFromRef(refO);
-                const doiR = toDoiUrl(r.doi_replication) || extractDoiFromRef(refR);
+                // Check if original data exists (not just empty strings)
+                const origNVal = r.original_n ?? r.n_original;
+                const repNVal = r.replication_n ?? r.n_replication;
+                const origESVal = r.original_es_r ?? r.es_original;
+                const repESVal = r.replication_es_r ?? r.es_replication;
+                
+                const nO = origNVal != null && String(origNVal).trim() !== "" ? toNumber(origNVal) : null;
+                const nR = repNVal != null && String(repNVal).trim() !== "" ? toNumber(repNVal) : null;
+                const eO = origESVal != null && String(origESVal).trim() !== "" ? toNumber(origESVal) : null;
+                const eR = repESVal != null && String(repESVal).trim() !== "" ? toNumber(repESVal) : null;
+                
+                const esOType = String(r.original_es_type ?? "");
+                const esRType = String(r.replication_es_type ?? "");
+                const citationO = String(r.original_citation_html || "");
+                const citationR = String(r.replication_citation_html || "");
                 return (
                   <tr key={i} className="border-b hover:bg-black/5 dark:hover:bg-white/5">
                     <td className="align-top p-2 text-right">{i + 1}</td>
                     <td className="align-top p-2" style={{ width: 240 }}>
-                      {doiO ? (
-                        <a className="underline" href={doiO} target="_blank" rel="noreferrer" title={refO}>
-                          {(parsedO.firstAuthorLast || "").trim()}{parsedO.firstAuthorLast ? " et al." : ""}{journalO || parsedO.year ? ", " : ""}{parsedO.journal || journalO || ""}{(parsedO.journal || journalO) && parsedO.year ? ", " : ""}{parsedO.year || ""}
-                        </a>
+                      {citationO ? (
+                        <span dangerouslySetInnerHTML={{ __html: citationO }} />
                       ) : (
-                        <span title={refO} className="opacity-80">
-                          {(parsedO.firstAuthorLast || "").trim()}{parsedO.firstAuthorLast ? " et al." : ""}{journalO || parsedO.year ? ", " : ""}{parsedO.journal || journalO || ""}{(parsedO.journal || journalO) && parsedO.year ? ", " : ""}{parsedO.year || ""}
-                        </span>
+                        <span className="opacity-80">—</span>
                       )}
                     </td>
                     <td className="align-top p-2" style={{ width: 240 }}>
-                      {doiR ? (
-                        <a className="underline" href={doiR} target="_blank" rel="noreferrer" title={refR}>
-                          {(parsedR.firstAuthorLast || "").trim()}{parsedR.firstAuthorLast ? " et al." : ""}{parsedR.journal || parsedR.year ? ", " : ""}{parsedR.journal || ""}{parsedR.journal && parsedR.year ? ", " : ""}{parsedR.year || ""}
-                        </a>
+                      {citationR ? (
+                        <span dangerouslySetInnerHTML={{ __html: citationR }} />
                       ) : (
-                        <span title={refR} className="opacity-80">
-                          {(parsedR.firstAuthorLast || "").trim()}{parsedR.firstAuthorLast ? " et al." : ""}{parsedR.journal || parsedR.year ? ", " : ""}{parsedR.journal || ""}{parsedR.journal && parsedR.year ? ", " : ""}{parsedR.year || ""}
-                        </span>
+                        <span className="opacity-80">—</span>
                       )}
                     </td>
                     <td className="align-top p-2">
                       <div className="font-medium">{String(r.description || r.tags || "—")}</div>
-                      <div className="text-xs opacity-70 mt-1">{String(r.claim_text_orig || "")}</div>
                     </td>
                     <td className="align-top p-2">{String(r.discipline || "")}</td>
                     <td className="align-top p-2">{String(r.result || "")}</td>
-                    <td className="align-top p-2 text-right">{nO ?? ""}</td>
-                    <td className="align-top p-2 text-right">{nR ?? ""}</td>
-                    <td className="align-top p-2 text-right">{esOVal != null && esOVal !== "" ? `${formatSig4(esOVal)}${esOType ? ` ${esOType}` : ""}` : ""}</td>
-                    <td className="align-top p-2 text-right">{esRVal != null && esRVal !== "" ? `${formatSig4(esRVal)}${esRType ? ` ${esRType}` : ""}` : ""}</td>
-                    <td className="align-top p-2 text-right">{formatSig4(eO)}</td>
-                    <td className="align-top p-2 text-right">{formatSig4(eR)}</td>
+                    <td className="align-top p-2 text-right">{nO != null ? nO : ""}</td>
+                    <td className="align-top p-2 text-right">{nR != null ? nR : ""}</td>
+                    <td className="align-top p-2 text-right">{eO != null ? `${formatSig4(eO)}${esOType ? ` ${esOType}` : ""}` : ""}</td>
+                    <td className="align-top p-2 text-right">{eR != null ? `${formatSig4(eR)}${esRType ? ` ${esRType}` : ""}` : ""}</td>
+                    <td className="align-top p-2 text-right">{eO != null ? formatSig4(eO) : ""}</td>
+                    <td className="align-top p-2 text-right">{eR != null ? formatSig4(eR) : ""}</td>
                   </tr>
                 );
               })}
@@ -394,8 +385,8 @@ function InlineScatter({ rows }: { rows: AnyRecord[] }) {
   const innerH = height - margin.top - margin.bottom;
   const pts = rows
     .map((r) => {
-      const o = toNumber(r.es_original);
-      const rv = toNumber(r.es_replication);
+      const o = toNumber(r.original_es_r ?? r.es_original);
+      const rv = toNumber(r.replication_es_r ?? r.es_replication);
       if (o == null || rv == null) return null;
       const oAdj = o >= 0 ? o : -o;
       const rAdj = o >= 0 ? rv : -rv;
@@ -421,13 +412,9 @@ function InlineScatter({ rows }: { rows: AnyRecord[] }) {
   const yTicks = allTicks.filter((t) => t >= yMin && t <= yMax);
 
   function color(res: string): string {
-    if (res.includes("success")) return "#10b981";
-    if (res.includes("failure") || res.includes("reversal")) return "#f87171";
-    return "#9ca3af";
-  }
-
-  function shouldGrey(o: number, r: number, res: string): boolean {
-    return res.includes("success") && o > 0 && r < 0;
+    if (res === "success") return "#10b981"; // Green for success
+    if (res === "failure") return "#f87171"; // Red for failure
+    return "#9ca3af"; // Gray for inconclusive or other
   }
 
   return (
@@ -455,7 +442,7 @@ function InlineScatter({ rows }: { rows: AnyRecord[] }) {
             );
           })()}
           {pts.map((p, i) => {
-            const fill = shouldGrey(p.o, p.r, p.res) ? "#9ca3af" : color(p.res);
+            const fill = color(p.res);
             return (
               <g key={i} transform={`translate(${x(p.o)},${y(p.r)})`}>
                 <title>{p.desc}</title>

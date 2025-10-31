@@ -16,13 +16,17 @@ function toNumber(value: unknown): number | null {
 }
 
 function normalizeEffectSigns(row: AnyRecord): void {
-  const eO = toNumber(row.es_original);
-  const eR = toNumber(row.es_replication);
+  const eO = toNumber(row.original_es_r);
+  const eR = toNumber(row.replication_es_r);
   if (eO == null || eR == null) return;
   if (eO < 0) {
+    row.original_es_r = -eO;
+    row.replication_es_r = -eR;
     row.es_original = -eO;
     row.es_replication = -eR;
   } else {
+    row.original_es_r = eO;
+    row.replication_es_r = eR;
     row.es_original = eO;
     row.es_replication = eR;
   }
@@ -37,11 +41,17 @@ async function loadCsv(filePath: string): Promise<{ rows: AnyRecord[]; columns: 
     for (const key of columns) {
       obj[key] = row[key as keyof typeof row] ?? null;
     }
+    // Map new column names to old ones for compatibility
+    obj.es_original = obj.original_es_r ?? null;
+    obj.es_replication = obj.replication_es_r ?? null;
+    obj.n_original = obj.original_n ?? null;
+    obj.n_replication = obj.replication_n ?? null;
+    // Keep original citation HTML columns
     return obj;
   });
   const filtered = normalized.filter((r: AnyRecord) => {
-    const eO = Number(String(r.es_original ?? "").trim());
-    const eR = Number(String(r.es_replication ?? "").trim());
+    const eO = Number(String(r.original_es_r ?? "").trim());
+    const eR = Number(String(r.replication_es_r ?? "").trim());
     return Number.isFinite(eO) && Number.isFinite(eR);
   });
   for (const r of filtered) normalizeEffectSigns(r);
@@ -51,7 +61,7 @@ async function loadCsv(filePath: string): Promise<{ rows: AnyRecord[]; columns: 
 export async function GET() {
   try {
     if (!cachedData) {
-      const dataPath = path.join(process.cwd(), "data", "fred_data.csv");
+      const dataPath = path.join(process.cwd(), "data", "replications_database.csv");
       cachedData = await loadCsv(dataPath);
     }
 
