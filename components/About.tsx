@@ -32,7 +32,7 @@ export const About = () => {
                 However, there are also one-off "garden variety" replication attempts. They are rare (perhaps 1% of papers), but there are thousands out there. Using both manual curation and AI/LLMs, we are creating a database of replications and compiling statistics on how reproducibility varies across fields, including fields like materials science and engineering, where insights into reproducibility are scarce.
               </p>
               <p>
-                A database of replications will enable new avenues of metascience research looking at "correlates of reproducibility". Additionally, do p-curve analysis, z-curve analysis, and funnel plots at a larger scale than was possible before.
+                A database of replications will enable new avenues of metascience research looking at "correlates of reproducibility". Additionally, we will be able to do p-curve analysis, z-curve analysis, and funnel plots at a larger scale than was possible before.
               </p>
               <p>
                 Longer term, we hope to create a reproducibility ranking for journals. Reproducibility rankings for journals could improve science by shifting focus away from impact factor (citation counts) towards the actual quality and rigor of scientific work. Previous work <Link href="https://www.pnas.org/doi/10.1073/pnas.1909046117" target="_blank" rel="noopener noreferrer" className="underline">shows that</Link> citation counts are not correlated with reproducibility and that citation count is positively correlated with the chance that a paper will be retracted.
