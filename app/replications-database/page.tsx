@@ -191,6 +191,8 @@ export default function ReplicationsDatabasePage() {
   const [error, setError] = useState<string | null>(null);
 
   const [discipline, setDiscipline] = useState<string>("");
+  const [openAlexField, setOpenAlexField] = useState<string>("");
+  const [openAlexSubfield, setOpenAlexSubfield] = useState<string>("");
   const [result, setResult] = useState<string>("");
   const [search, setSearch] = useState<string>("");
   const [visibleColumns, setVisibleColumns] = useState<Set<ColumnKey>>(
@@ -235,6 +237,48 @@ export default function ReplicationsDatabasePage() {
     });
   }, [data]);
 
+  const openAlexFieldOptions: Option[] = useMemo(() => {
+    if (!data) return [];
+    const counts = new Map<string, number>();
+    for (const r of data.rows) {
+      const key = String(r.openalex_field ?? "");
+      counts.set(key, (counts.get(key) || 0) + 1);
+    }
+    const entries = Array.from(counts.entries()).filter(([k]) => k !== "");
+    entries.sort((a, b) => {
+      if (b[1] !== a[1]) return b[1] - a[1];
+      return a[0].localeCompare(b[0]);
+    });
+    const sortedValues = entries.map(([k]) => k);
+    const values = ["", ...sortedValues];
+    return values.map((v) => {
+      if (v === "") return { value: v, label: "All fields" };
+      const c = counts.get(v) || 0;
+      return { value: v, label: `${v} (${c})` };
+    });
+  }, [data]);
+
+  const openAlexSubfieldOptions: Option[] = useMemo(() => {
+    if (!data) return [];
+    const counts = new Map<string, number>();
+    for (const r of data.rows) {
+      const key = String(r.openalex_subfield ?? "");
+      counts.set(key, (counts.get(key) || 0) + 1);
+    }
+    const entries = Array.from(counts.entries()).filter(([k]) => k !== "");
+    entries.sort((a, b) => {
+      if (b[1] !== a[1]) return b[1] - a[1];
+      return a[0].localeCompare(b[0]);
+    });
+    const sortedValues = entries.map(([k]) => k);
+    const values = ["", ...sortedValues];
+    return values.map((v) => {
+      if (v === "") return { value: v, label: "All subfields" };
+      const c = counts.get(v) || 0;
+      return { value: v, label: `${v} (${c})` };
+    });
+  }, [data]);
+
   const resultOptions: Option[] = useMemo(() => {
     if (!data) return [];
     return ["", ...uniqueValues(data.rows, "result")].map((v) => ({ value: v, label: v || "All results" }));
@@ -244,6 +288,8 @@ export default function ReplicationsDatabasePage() {
     if (!data) return [] as AnyRecord[];
     return data.rows.filter((r) => {
       if (discipline && String(r.discipline ?? "") !== discipline) return false;
+      if (openAlexField && String(r.openalex_field ?? "") !== openAlexField) return false;
+      if (openAlexSubfield && String(r.openalex_subfield ?? "") !== openAlexSubfield) return false;
       if (result && String(r.result ?? "") !== result) return false;
       if (search) {
         const s = search.toLowerCase();
@@ -257,7 +303,7 @@ export default function ReplicationsDatabasePage() {
       if (nO == null || nR == null || eO == null || eR == null) return false;
       return true;
     });
-  }, [data, discipline, result, search]);
+  }, [data, discipline, openAlexField, openAlexSubfield, result, search]);
 
   const stat = useMemo(() => {
     const n = filteredRows.length;
@@ -310,7 +356,7 @@ export default function ReplicationsDatabasePage() {
 
       {/* Controls */}
       <section className="mx-auto max-w-[90%] mt-6">
-        <div className="grid gap-3 md:grid-cols-3 items-end">
+        <div className="grid gap-3 md:grid-cols-5 items-end">
           <div className="md:col-span-1">
             <label htmlFor="discipline" className="block text-sm font-medium opacity-80 mb-1">Discipline</label>
             <select
@@ -320,6 +366,32 @@ export default function ReplicationsDatabasePage() {
               className="w-full h-10 rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             >
               {disciplineOptions.map((opt) => (
+                <option key={opt.value || "__all"} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="md:col-span-1">
+            <label htmlFor="openAlexField" className="block text-sm font-medium opacity-80 mb-1">OpenAlex Field (experimental - has errors)</label>
+            <select
+              id="openAlexField"
+              value={openAlexField}
+              onChange={(e) => setOpenAlexField(e.target.value)}
+              className="w-full h-10 rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              {openAlexFieldOptions.map((opt) => (
+                <option key={opt.value || "__all"} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="md:col-span-1">
+            <label htmlFor="openAlexSubfield" className="block text-sm font-medium opacity-80 mb-1">OpenAlex Subfield</label>
+            <select
+              id="openAlexSubfield"
+              value={openAlexSubfield}
+              onChange={(e) => setOpenAlexSubfield(e.target.value)}
+              className="w-full h-10 rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              {openAlexSubfieldOptions.map((opt) => (
                 <option key={opt.value || "__all"} value={opt.value}>{opt.label}</option>
               ))}
             </select>
