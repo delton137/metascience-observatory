@@ -1,7 +1,6 @@
-import type {StructureBuilder, StructureResolver} from 'sanity'
-
 // https://www.sanity.io/docs/structure-builder-cheat-sheet
-export const structure: StructureResolver = (S: StructureBuilder) =>
+// Using type inference to avoid circular dependency issues
+export const structure = (S: any) =>
   S.list()
     .title('Content')
     .items(S.documentTypeListItems())
