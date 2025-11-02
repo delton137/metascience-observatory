@@ -12,7 +12,7 @@ export default function PhilosophyPage() {
             <h1 className="text-3xl font-bold mb-6 text-foreground">Philosophy</h1>
             
             <p className="mb-6 text-foreground/90">
-              We have a different approach compared to previous initiatives. Here is a brief summary of how we define terms and think about things:
+              We have a very different approach to replications compared to previous initiatives. Here is a brief summary of how we define terms and think about things:
             </p>
 
             <div className="space-y-8 mb-12">
@@ -21,16 +21,34 @@ export default function PhilosophyPage() {
                   We are interested in effects, not papers
                 </h2>
                 <p className="text-foreground/90 leading-relaxed">
-                  We are interested in general effects, like "prozac helps people with depression", "LK-99 is a superconductor", or "people drink less from red-labeled cups than blue-labeled cups."
+                  We are interested in effects, like "prozac helps people with depression", "LK-99 is a superconductor", or "people drink less from red-labeled cups than blue-labeled cups."
                 </p>
               </section>
 
               <section>
                 <h2 className="text-2xl font-bold mb-4 text-foreground">
-                  A replication experiment may use similar methods or very different methods
+                  Our definition of replication
                 </h2>
                 <p className="text-foreground/90 leading-relaxed">
-                  We define the "original experiment" as the earliest published experiment that claims an effect exists. We define a "replication experiment" as an experiment run after the original experiment which tests for the same effect. The replication experiment may use methods very similar to the original experiment, or it may use completely different methods.
+                  We define a <span className="font-bold">replication</span> as "an experiment which is done to test an effect claim made in prior research." (closely following{" "}
+                  <a 
+                    href="https://journals.plos.org/plosbiology/article?id=10.1371/journal.pbio.3000691"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline"
+                  >
+                    Nosek & Errington, 2020
+                  </a>
+                  )
+                </p>
+              </section>
+
+              <section>
+                <h2 className="text-2xl font-bold mb-4 text-foreground">
+                  A replication may use similar methods or very different methods
+                </h2>
+                <p className="text-foreground/90 leading-relaxed">
+                  The replication experiment may use methods very similar to the prior experiment, or completely different methods. The important thing is whether the effect being tested for is the same, not the particular methods used to test for the effect.
                 </p>
               </section>
 
@@ -59,10 +77,10 @@ export default function PhilosophyPage() {
 
               <section>
                 <h2 className="text-2xl font-bold mb-4 text-foreground">
-                  Statistics from replication experiments are saved to compare the magnitude of effects, when possible
+                  Statistics from replication experiments are saved to analyze the magnitude of effects, when possible
                 </h2>
                 <p className="text-foreground/90 leading-relaxed">
-                  The classification we just mentioned says nothing about the magnitude of an effect. Our first level of analysis is not concerned with magnitude. However, we pull down data on effect magnitude when possible. However, comparing the magnitude measured by different experiments can be tricky. For instance, one study might test whether Prozac helps with depression using a Beck Depression Inventory administered after three weeks, while another study might use a Hamilton Depression Rating Scale administered at three months. Where possible we get Cohen's <em>d</em> effect sizes so different experiments can be compared.
+                  The classification we just mentioned says nothing about the magnitude of an effect. Our first analysis is not concerned with magnitude. However, we pull down data on effect magnitudes when possible. However, comparing the effect magnitudes measured by different experiments can be tricky. For instance, one study might test whether Prozac helps with depression using a Beck Depression Inventory administered after three weeks, while another study might use a Hamilton Depression Rating Scale administered at three months. Where possible we compare experimental findings using a standard scale or effect size measurement device like Cohen's <em>d</em>.
                 </p>
               </section>
 
@@ -91,6 +109,47 @@ export default function PhilosophyPage() {
               <div className="space-y-8">
                 <section>
                   <h3 className="text-xl font-bold mb-4 text-foreground">
+                    How we define "replication" vs other definitions
+                  </h3>
+                  <p className="text-foreground/90 leading-relaxed mb-4">
+                    Our definition of a "replication experiment" is very broad, and some may think it too broad. Researchers discussing replication generally distinguish two or more forms of replication, such as:
+                  </p>
+                  <div className="space-y-4 text-foreground/90">
+                    <p>
+                      <span className="font-bold">"Technical" replication</span> (also called or "robustness checking") - where a new experiment is not done, but raw data from an existing experiment is reanalyzed using the reported procedures. Or, it may involve simply running provided code on data to get results (this is called "frictionless" reproduction).
+                    </p>
+                    <p>
+                      <span className="font-bold">"Exact", "direct", or "narrow-sense" replication</span> - where an experimental procedure is repeated as closely as possible, usually following the specifications for the procedure given in the original paper. This is the most common understanding of the term "replication".
+                    </p>
+                    <p>
+                      <span className="font-bold">"Close" or "systematic" replication</span> - where an experimental procedure is repeated closely, but with one or more intentional changes.
+                    </p>
+                    <p>
+                      <span className="font-bold">"Conceptual" or "broad-sense" replication</span> - where a finding from a previous experiment is tested in a new experiment using a different experimental procedure.
+                    </p>
+                  </div>
+                  <p className="text-foreground/90 leading-relaxed mt-4">
+                    While all these terms have merit, they are hard to define precisely, with the exception of "technical replication", which we don't really view as a replication since no new experiment is done.
+                  </p>
+                  <p className="text-foreground/90 leading-relaxed mt-4">
+                    Clearly, replication is a spectrum, ranging from a "direct"/"exact" replication to "broad-sense" replication. Instead of trying to distinguish different degrees of replication, we consider any experiment on the spectrum to be a replication. This simplifies our work greatly, making it easier for us to achieve scale with our database.
+                  </p>
+                  <p className="text-foreground/90 leading-relaxed mt-4">
+                    At the end of the day, we are most interested in whether scientist's claims hold up when subjected to additional experimental tests. If science is healthy, claims should hold up. If science is unhealthy, claims will not replicate (due to methodological/logical/mathematical errors, other mistakes, improper reporting, intentional fraud, etc).
+                  </p>
+                </section>
+
+                <section>
+                  <h3 className="text-xl font-bold mb-4 text-foreground">
+                    "Original experiment" vs "replication experiment"
+                  </h3>
+                  <p className="text-foreground/90 leading-relaxed">
+                    We typically define the "original experiment" as the earliest published experiment that resulted in a claim that an effect exists. We define a "replication experiment" as any experiment published after the original experiment was published which tested for the same effect.
+                  </p>
+                </section>
+
+                <section>
+                  <h3 className="text-xl font-bold mb-4 text-foreground">
                     We are interested in effects, not papers
                   </h3>
                   <p className="text-foreground/90 leading-relaxed">
@@ -100,19 +159,10 @@ export default function PhilosophyPage() {
 
                 <section>
                   <h3 className="text-xl font-bold mb-4 text-foreground">
-                    We are interested in the general effects being claimed
+                    We are interested in the general effects that scientists claim
                   </h3>
                   <p className="text-foreground/90 leading-relaxed">
-                    A paper might claim to have discovered a general effect like "Prozac helps with depression". Technically what the paper showed was "Prozac helps with depression in Americans diagnosed with depression by a clinician at a major hospital system in the years 2010-2015 according to measure XYZ", but based on theoretical considerations, the authors claim their work supports the general effect. We are most interested in the most general effects that are being claimed in the scientific literature, although we may also include narrow effects in our database.
-                  </p>
-                </section>
-
-                <section>
-                  <h3 className="text-xl font-bold mb-4 text-foreground">
-                    How we define "replication"
-                  </h3>
-                  <p className="text-foreground/90 leading-relaxed">
-                    Our definition of a "replication experiment" is very broad, and some may think it too broad. Replication is a spectrum, ranging from a "narrow/close" replication to a "broad-sense" replication. A narrow replication attempts to follow the original experiment very closely, whereas a broad-sense replication may use a different experimental approach. While there is clearly a distinction here, it is hard to formalize.
+                    Scientific papers often have one or more major claims, like "Prozac helps with depression". In a narrow sense all an experiment may have shown was "Prozac helps with depression in people diagnosed with depression by a clinician at a Houston-area hospital system in the years 2010-2015", but based on theoretical considerations, the authors claim their work gives strong evidence for the general effect that "Prozac helps with depression". We are most interested in the replicability of the general effects that scientists claim, not more narrow readings of an experiment. Other examples of general claims are "neutrinos can travel faster than light", "the MMR vaccine causes autism", "power posing increases success in job interviews", and "water can exist in a polymerized form" (all of those claims failed replication and are now considered false).
                   </p>
                 </section>
               </div>
@@ -124,4 +174,3 @@ export default function PhilosophyPage() {
     </div>
   );
 }
-
