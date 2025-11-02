@@ -54,6 +54,205 @@ function MiniBar({ value, max, color }: { value: number; max: number; color?: st
   );
 }
 
+// Compute p-value from t-statistic (approximate two-tailed)
+function pValueFromT(t: number, df: number): number {
+  // Simplified approximation - for more precision, use proper t-distribution
+  // Using normal approximation for df > 30
+  const z = Math.abs(t);
+  if (df > 30) {
+    // Quick approximation: p ≈ 2 * (1 - normcdf(z))
+    // Using erf approximation for standard normal
+    if (z > 6) return 0;
+    const x = z / Math.SQRT2;
+    const erf = 1 - 1 / (1 + 0.278393 * x + 0.230389 * x * x + 0.000972 * x * x * x + 0.078108 * x * x * x * x) ** 4;
+    // Two-tailed: multiply by 2
+    return 2 * (1 - erf);
+  }
+  // For smaller df, use a rough approximation (two-tailed)
+  if (z > 3) return 0.01;
+  if (z > 2.5) return 0.02;
+  if (z > 2) return 0.05;
+  if (z > 1.96) return 0.06;
+  if (z > 1.5) return 0.15;
+  return 0.5;
+}
+
+// Compute outcome using "Repeated significance of effect direction" method
+function computeSignificanceOutcome(
+  origES: number,
+  repES: number,
+  origN: number,
+  repN: number,
+  origESType: string,
+  repESType: string
+): "success" | "failure" | "inconclusive" {
+  // Check if same direction
+  const sameDirection = (origES > 0 && repES > 0) || (origES < 0 && repES < 0);
+  const oppositeDirection = (origES > 0 && repES < 0) || (origES < 0 && repES > 0);
+  
+  // If opposite direction and replication has meaningful effect, it's a failure
+  if (oppositeDirection && Math.abs(repES) > 0.01) {
+    return "failure";
+  }
+
+  // If replication effect is essentially zero, check if original was also near zero
+  if (Math.abs(repES) < 0.001) {
+    if (Math.abs(origES) < 0.001) {
+      return "inconclusive"; // Both near zero
+    }
+    return "failure"; // Original had effect, replication doesn't
+  }
+
+  // Compute significance for replication
+  let tRep: number | null = null;
+  let dfRep: number | null = null;
+
+  const repType = (repESType || "").toLowerCase();
+  
+  if (repType === "r" || repType === "") {
+    // Correlation: t = r * sqrt((n-2)/(1-r^2))
+    if (Math.abs(repES) < 0.999 && repN > 2) {
+      const denom = 1 - repES * repES;
+      if (denom > 0.001) {
+        tRep = repES * Math.sqrt((repN - 2) / denom);
+        dfRep = repN - 2;
+      }
+    }
+  } else if (repType === "d") {
+    // Cohen's d: simplified t = d * sqrt(n/2) for equal groups
+    // Using simplified approximation assuming two groups
+    if (repN > 2) {
+      tRep = repES * Math.sqrt(repN / 2);
+      dfRep = repN - 2;
+    }
+  } else if (repType === "etasq" || repType === "eta squared") {
+    // Eta squared - convert to correlation-like metric first
+    if (repES > 0 && repES < 1 && repN > 2) {
+      const r = Math.sqrt(repES);
+      const denom = 1 - r * r;
+      if (denom > 0.001) {
+        tRep = r * Math.sqrt((repN - 2) / denom);
+        dfRep = repN - 2;
+      }
+    }
+  } else {
+    // Unknown type, try correlation approach
+    if (Math.abs(repES) < 0.999 && repN > 2) {
+      const denom = 1 - repES * repES;
+      if (denom > 0.001) {
+        tRep = repES * Math.sqrt((repN - 2) / denom);
+        dfRep = repN - 2;
+      }
+    }
+  }
+
+  if (tRep == null || dfRep == null || dfRep <= 0) {
+    return "inconclusive";
+  }
+
+  const pRep = pValueFromT(tRep, dfRep);
+  const isSignificant = pRep < 0.05;
+
+  if (sameDirection && isSignificant) {
+    return "success";
+  } else if (sameDirection && !isSignificant) {
+    return "inconclusive"; // Same direction but not significant
+  } else {
+    return "failure"; // Should not reach here due to earlier checks, but just in case
+  }
+}
+
+// Compute outcome using "Replication Confidence Interval Consistency" method
+function computeConfidenceIntervalOutcome(
+  origES: number,
+  repES: number,
+  origN: number,
+  repN: number,
+  origESType: string,
+  repESType: string
+): "success" | "failure" | "inconclusive" {
+  // Compute standard error for replication effect size
+  let seRep: number | null = null;
+
+  const repType = (repESType || "").toLowerCase();
+  
+  if (repType === "r" || repType === "") {
+    // Correlation: Use Fisher z-transform for more accurate CI
+    // SE_z = 1/sqrt(n-3)
+    if (repN > 3 && Math.abs(repES) < 0.999) {
+      try {
+        const zRep = 0.5 * Math.log((1 + repES) / (1 - repES));
+        const seZ = 1 / Math.sqrt(repN - 3);
+        // Convert back to SE of r: SE_r ≈ (1-r^2) * SE_z
+        const rSquared = repES * repES;
+        seRep = (1 - rSquared) * seZ;
+        // Ensure positive and reasonable
+        if (seRep <= 0 || !Number.isFinite(seRep)) seRep = null;
+      } catch (e) {
+        // Handle edge cases (e.g., repES = 1 or -1)
+        seRep = null;
+      }
+    }
+    // Fallback: simpler approximation if Fisher transform fails
+    if (seRep == null && repN > 2 && Math.abs(repES) < 0.999) {
+      const rSquared = repES * repES;
+      seRep = Math.sqrt((1 - rSquared) * (1 - rSquared) / (repN - 1));
+    }
+  } else if (repType === "d") {
+    // Cohen's d: SE ≈ sqrt((n1+n2)/(n1*n2) + d^2/(2*(n1+n2)))
+    // Simplified for equal groups (assuming n1 = n2 = n/2): SE ≈ sqrt(4/n + d^2/n)
+    // Even simpler approximation: SE ≈ sqrt(2/n) for equal groups (ignoring d term for simplicity)
+    if (repN > 2) {
+      seRep = Math.sqrt(2 / repN);
+    }
+  } else if (repType === "etasq" || repType === "eta squared") {
+    // For eta squared, convert to correlation-like metric
+    if (repES > 0 && repES < 1 && repN > 3) {
+      try {
+        const r = Math.sqrt(repES);
+        if (Math.abs(r) < 0.999) {
+          const z = 0.5 * Math.log((1 + r) / (1 - r));
+          const seZ = 1 / Math.sqrt(repN - 3);
+          const rSquared = r * r;
+          seRep = (1 - rSquared) * seZ;
+          if (seRep <= 0 || !Number.isFinite(seRep)) seRep = null;
+        }
+      } catch (e) {
+        seRep = null;
+      }
+    }
+  } else {
+    // Default: try correlation approach
+    if (repN > 3 && Math.abs(repES) < 0.999) {
+      try {
+        const zRep = 0.5 * Math.log((1 + repES) / (1 - repES));
+        const seZ = 1 / Math.sqrt(repN - 3);
+        const rSquared = repES * repES;
+        seRep = (1 - rSquared) * seZ;
+        if (seRep <= 0 || !Number.isFinite(seRep)) seRep = null;
+      } catch (e) {
+        seRep = null;
+      }
+    }
+  }
+
+  if (seRep == null || seRep <= 0 || !Number.isFinite(seRep)) {
+    return "inconclusive";
+  }
+
+  // Compute 95% confidence interval
+  const z95 = 1.96;
+  const ciLower = repES - z95 * seRep;
+  const ciUpper = repES + z95 * seRep;
+
+  // Check if original effect size falls within replication CI
+  if (origES >= ciLower && origES <= ciUpper) {
+    return "success";
+  } else {
+    return "failure";
+  }
+}
+
 function parseApaRef(ref: string): { firstAuthorLast?: string; year?: string; journal?: string } {
   const result: { firstAuthorLast?: string; year?: string; journal?: string } = {};
   const trimmed = (ref || "").trim();
@@ -205,6 +404,7 @@ export default function ReplicationsDatabasePage() {
     new Set(DEFAULT_COLUMNS)
   );
   const [showColumnSelector, setShowColumnSelector] = useState(false);
+  const [outcomeMethod, setOutcomeMethod] = useState<"significance" | "confidence">("significance");
 
   useEffect(() => {
     async function fetchData() {
@@ -318,21 +518,36 @@ export default function ReplicationsDatabasePage() {
     let inconclusive = 0;
     let withEffectSizes = 0;
     for (const r of filteredRows) {
-      const res = String(r.result ?? "").trim().toLowerCase();
-      if (res === "success") success++;
-      else if (res === "failure") failure++;
-      else inconclusive++; // Includes "inconclusive" and any other/empty values
-      
-      // Count rows with both original and replication effect sizes present
+      // Compute outcome using effect sizes
       const eO = toNumber(r.original_es_r ?? r.es_original);
       const eR = toNumber(r.replication_es_r ?? r.es_replication);
+      const nO = toNumber(r.original_n ?? r.n_original);
+      const nR = toNumber(r.replication_n ?? r.n_replication);
+      const esOType = String(r.original_es_type ?? "");
+      const esRType = String(r.replication_es_type ?? "");
+      
+      let res: "success" | "failure" | "inconclusive";
+      if (eO == null || eR == null || nO == null || nR == null || nO <= 0 || nR <= 0) {
+        res = "inconclusive";
+      } else if (outcomeMethod === "significance") {
+        res = computeSignificanceOutcome(eO, eR, nO, nR, esOType, esRType);
+      } else { // confidence
+        res = computeConfidenceIntervalOutcome(eO, eR, nO, nR, esOType, esRType);
+      }
+      
+      if (res === "success") success++;
+      else if (res === "failure") failure++;
+      else inconclusive++;
+      
+      // Count rows with both original and replication effect sizes present
+      // (reusing eO and eR already computed above)
       if (eO != null && eR != null && eO !== 0 && eR !== 0) {
         withEffectSizes++;
       }
     }
     const pct = (v: number) => (n > 0 ? Math.round((v / n) * 1000) / 10 : 0);
     return { n, success, failure, inconclusive, pctSuccess: pct(success), pctFailure: pct(failure), pctInconclusive: pct(inconclusive), withEffectSizes };
-  }, [filteredRows]);
+  }, [filteredRows, outcomeMethod]);
 
   if (loading) {
     return (
@@ -429,7 +644,23 @@ export default function ReplicationsDatabasePage() {
           <div className="text-3xl font-semibold">{stat.n}</div>
         </div>
         <div className="border rounded p-4 col-span-1">
-          <div className="text-sm opacity-70">Outcome mix ({stat.n} replications)</div>
+          <div className="text-sm opacity-70 mb-2">Outcome mix ({stat.n} replications)</div>
+          <div className="mb-3">
+            <label className="block text-sm font-medium opacity-80 mb-1">Method</label>
+            <select
+              value={outcomeMethod}
+              onChange={(e) => setOutcomeMethod(e.target.value as "significance" | "confidence")}
+              className="w-full h-8 text-xs rounded-md border border-border bg-background px-2 focus:outline-none focus:ring-1 focus:ring-primary"
+              title={
+                outcomeMethod === "significance"
+                  ? "Check if replication has statistically significant result in same direction as original"
+                  : "Check if original effect size falls within replication confidence interval"
+              }
+            >
+              <option value="significance">Repeated significance of effect direction</option>
+              <option value="confidence">Replication Confidence Interval Consistency</option>
+            </select>
+          </div>
           <div className="mt-2 space-y-2">
             <div className="flex items-center gap-3">
               <div className="w-24 text-sm">Success</div>
@@ -451,7 +682,7 @@ export default function ReplicationsDatabasePage() {
         <div className="border rounded p-4 col-span-2">
           <div className="text-sm opacity-70">Replication Effect Size vs Original Effect Size ({stat.withEffectSizes} replications)</div>
           <div className="mt-2">
-            <InlineScatter rows={filteredRows} />
+            <InlineScatter rows={filteredRows} outcomeMethod={outcomeMethod} />
           </div>
         </div>
       </section>
@@ -713,7 +944,7 @@ export default function ReplicationsDatabasePage() {
   );
 }
 
-function InlineScatter({ rows }: { rows: AnyRecord[] }) {
+function InlineScatter({ rows, outcomeMethod }: { rows: AnyRecord[]; outcomeMethod: "significance" | "confidence" }) {
   const width = 600;
   const height = 220;
   const margin = { top: 10, right: 10, bottom: 30, left: 30 };
@@ -726,10 +957,25 @@ function InlineScatter({ rows }: { rows: AnyRecord[] }) {
       if (o == null || rv == null) return null;
       const oAdj = o >= 0 ? o : -o;
       const rAdj = o >= 0 ? rv : -rv;
-      const res = String(r.result || "").toLowerCase();
+      
+      // Compute outcome using the selected method
+      const nO = toNumber(r.original_n ?? r.n_original);
+      const nR = toNumber(r.replication_n ?? r.n_replication);
+      const esOType = String(r.original_es_type ?? "");
+      const esRType = String(r.replication_es_type ?? "");
+      
+      let res: "success" | "failure" | "inconclusive";
+      if (nO == null || nR == null || nO <= 0 || nR <= 0) {
+        res = "inconclusive";
+      } else if (outcomeMethod === "significance") {
+        res = computeSignificanceOutcome(o, rv, nO, nR, esOType, esRType);
+      } else { // confidence
+        res = computeConfidenceIntervalOutcome(o, rv, nO, nR, esOType, esRType);
+      }
+      
       return { o: oAdj, r: rAdj, desc: String(r.description || r.tags || ""), res };
     })
-    .filter(Boolean) as Array<{ o: number; r: number; desc: string; res: string }>;
+    .filter(Boolean) as Array<{ o: number; r: number; desc: string; res: "success" | "failure" | "inconclusive" }>;
 
   const xMin: number = -0.1;
   const xMax: number = 1;
@@ -747,7 +993,7 @@ function InlineScatter({ rows }: { rows: AnyRecord[] }) {
   const xTicks = allTicks.filter((t) => t >= xMin && t <= xMax);
   const yTicks = allTicks.filter((t) => t >= yMin && t <= yMax);
 
-  function color(res: string): string {
+  function color(res: "success" | "failure" | "inconclusive"): string {
     if (res === "success") return "#10b981"; // Green for success
     if (res === "failure") return "#f87171"; // Red for failure
     return "#9ca3af"; // Gray for inconclusive or other

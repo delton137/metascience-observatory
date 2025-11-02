@@ -2,14 +2,14 @@
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 
-export default function PhilosophyPage() {
+export default function ApproachPage() {
   return (
     <div className="min-h-screen">
       <Navbar />
       <div className="pt-24 pb-16">
         <div className="container mx-auto px-4 max-w-4xl">
           <div className="prose prose-lg max-w-none">
-            <h1 className="text-3xl font-bold mb-6 text-foreground">Philosophy</h1>
+            <h1 className="text-3xl font-bold mb-6 text-foreground">Approach</h1>
             
             <p className="mb-6 text-foreground/90">
               We have a very different approach to replications compared to previous initiatives. Here is a brief summary of how we define terms and think about things:
@@ -174,3 +174,4 @@ export default function PhilosophyPage() {
     </div>
   );
 }
+
