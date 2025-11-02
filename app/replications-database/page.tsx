@@ -646,7 +646,17 @@ export default function ReplicationsDatabasePage() {
         <div className="border rounded p-4 col-span-1">
           <div className="text-sm opacity-70 mb-2">Outcome mix ({stat.n} replications)</div>
           <div className="mb-3">
-            <label className="block text-sm font-medium opacity-80 mb-1">Method</label>
+            <label className="block text-sm font-medium opacity-80 mb-1">
+              Method{" "}
+              <a
+                href="https://forrt.org/FReD/articles/success_criteria.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs opacity-60 hover:opacity-80 underline"
+              >
+                more info
+              </a>
+            </label>
             <select
               value={outcomeMethod}
               onChange={(e) => setOutcomeMethod(e.target.value as "significance" | "confidence")}
