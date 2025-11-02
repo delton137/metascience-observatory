@@ -26,7 +26,7 @@ export const Navbar = () => {
           <div className="hidden md:flex items-center gap-6 text-sm">
             <Link href="/#about" className="text-foreground/80 hover:text-foreground transition-colors">About</Link>
             <Link href="/#team" className="text-foreground/80 hover:text-foreground transition-colors">Team</Link>
-            <Link href="/philosophy" className="text-foreground/80 hover:text-foreground transition-colors">Philosophy</Link>
+            <Link href="/approach" className="text-foreground/80 hover:text-foreground transition-colors">Approach</Link>
             <Link href="/#donate" className="text-foreground/80 hover:text-foreground transition-colors">Donate</Link>
             <Button variant="outline" size="sm" asChild>
               <Link href="/replications-database">
@@ -78,11 +78,11 @@ export const Navbar = () => {
                 Team
               </Link>
               <Link
-                href="/philosophy"
+                href="/approach"
                 className="text-foreground/80 hover:text-foreground transition-colors py-2"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
-                Philosophy
+                Approach
               </Link>
               <Link
                 href="/#donate"
