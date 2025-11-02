@@ -24,8 +24,8 @@ export const Navbar = () => {
           </Link>
 
           <div className="hidden md:flex items-center gap-6 text-sm">
-            <a href="#about" className="text-foreground/80 hover:text-foreground transition-colors">About</a>
-            <a href="#team" className="text-foreground/80 hover:text-foreground transition-colors">Team</a>
+            <Link href="/#about" className="text-foreground/80 hover:text-foreground transition-colors">About</Link>
+            <Link href="/#team" className="text-foreground/80 hover:text-foreground transition-colors">Team</Link>
             <Link href="/philosophy" className="text-foreground/80 hover:text-foreground transition-colors">Philosophy</Link>
             <Link href="/#donate" className="text-foreground/80 hover:text-foreground transition-colors">Donate</Link>
             <Button variant="outline" size="sm" asChild>
@@ -63,20 +63,20 @@ export const Navbar = () => {
         {isMobileMenuOpen && (
           <div className="md:hidden border-t border-border mt-3 pt-3 pb-3">
             <div className="flex flex-col gap-3">
-              <a
-                href="#about"
+              <Link
+                href="/#about"
                 className="text-foreground/80 hover:text-foreground transition-colors py-2"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 About
-              </a>
-              <a
-                href="#team"
+              </Link>
+              <Link
+                href="/#team"
                 className="text-foreground/80 hover:text-foreground transition-colors py-2"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Team
-              </a>
+              </Link>
               <Link
                 href="/philosophy"
                 className="text-foreground/80 hover:text-foreground transition-colors py-2"
