@@ -39,11 +39,17 @@ function formatSig4(value: unknown): string {
   return s;
 }
 
-function MiniBar({ value, max }: { value: number; max: number }) {
+function MiniBar({ value, max, color }: { value: number; max: number; color?: string }) {
   const widthPct = max > 0 ? Math.max(0, Math.min(100, (value / max) * 100)) : 0;
   return (
     <div className="h-2 bg-black/10 dark:bg-white/10 rounded">
-      <div className="h-2 bg-black/60 dark:bg-white/60 rounded" style={{ width: `${widthPct}%` }} />
+      <div 
+        className={`h-2 rounded ${color ? "" : "bg-black/60 dark:bg-white/60"}`}
+        style={{ 
+          width: `${widthPct}%`,
+          ...(color ? { backgroundColor: color } : {})
+        }} 
+      />
     </div>
   );
 }
@@ -310,14 +316,22 @@ export default function ReplicationsDatabasePage() {
     let success = 0;
     let failure = 0;
     let inconclusive = 0;
+    let withEffectSizes = 0;
     for (const r of filteredRows) {
       const res = String(r.result ?? "").trim().toLowerCase();
       if (res === "success") success++;
       else if (res === "failure") failure++;
       else inconclusive++; // Includes "inconclusive" and any other/empty values
+      
+      // Count rows with both original and replication effect sizes present
+      const eO = toNumber(r.original_es_r ?? r.es_original);
+      const eR = toNumber(r.replication_es_r ?? r.es_replication);
+      if (eO != null && eR != null && eO !== 0 && eR !== 0) {
+        withEffectSizes++;
+      }
     }
     const pct = (v: number) => (n > 0 ? Math.round((v / n) * 1000) / 10 : 0);
-    return { n, success, failure, inconclusive, pctSuccess: pct(success), pctFailure: pct(failure), pctInconclusive: pct(inconclusive) };
+    return { n, success, failure, inconclusive, pctSuccess: pct(success), pctFailure: pct(failure), pctInconclusive: pct(inconclusive), withEffectSizes };
   }, [filteredRows]);
 
   if (loading) {
@@ -411,31 +425,31 @@ export default function ReplicationsDatabasePage() {
 
       <section className="mx-auto max-w-[90%] grid md:grid-cols-4 gap-4 mt-6">
         <div className="border rounded p-4 col-span-1">
-          <div className="text-sm opacity-70">Study Replications</div>
+          <div className="text-sm opacity-70">Effect replications</div>
           <div className="text-3xl font-semibold">{stat.n}</div>
         </div>
         <div className="border rounded p-4 col-span-1">
-          <div className="text-sm opacity-70">Outcome mix</div>
+          <div className="text-sm opacity-70">Outcome mix ({stat.n} replications)</div>
           <div className="mt-2 space-y-2">
             <div className="flex items-center gap-3">
               <div className="w-24 text-sm">Success</div>
-              <div className="flex-1"><MiniBar value={stat.pctSuccess} max={100} /></div>
+              <div className="flex-1"><MiniBar value={stat.pctSuccess} max={100} color="#10b981" /></div>
               <div className="w-24 text-right text-sm">{stat.success} ({stat.pctSuccess}%)</div>
             </div>
             <div className="flex items-center gap-3">
-              <div className="w-24 text-sm">Failure</div>
-              <div className="flex-1"><MiniBar value={stat.pctFailure} max={100} /></div>
-              <div className="w-24 text-right text-sm">{stat.failure} ({stat.pctFailure}%)</div>
+              <div className="w-24 text-sm">Inconclusive</div>
+              <div className="flex-1"><MiniBar value={stat.pctInconclusive} max={100} color="#9ca3af" /></div>
+              <div className="w-24 text-right text-sm">{stat.inconclusive} ({stat.pctInconclusive}%)</div>
             </div>
             <div className="flex items-center gap-3">
-              <div className="w-24 text-sm">Inconcl.</div>
-              <div className="flex-1"><MiniBar value={stat.pctInconclusive} max={100} /></div>
-              <div className="w-24 text-right text-sm">{stat.inconclusive} ({stat.pctInconclusive}%)</div>
+              <div className="w-24 text-sm">Failure</div>
+              <div className="flex-1"><MiniBar value={stat.pctFailure} max={100} color="#f87171" /></div>
+              <div className="w-24 text-right text-sm">{stat.failure} ({stat.pctFailure}%)</div>
             </div>
           </div>
         </div>
         <div className="border rounded p-4 col-span-2">
-          <div className="text-sm opacity-70">Replication Effect Size vs Original Effect Size (Converted to Pearson's r)</div>
+          <div className="text-sm opacity-70">Replication Effect Size vs Original Effect Size (Converted to Pearson's r) ({stat.withEffectSizes} replications)</div>
           <div className="mt-2">
             <InlineScatter rows={filteredRows} />
           </div>
@@ -591,22 +605,22 @@ export default function ReplicationsDatabasePage() {
                     <td className="align-top p-2">{String(r.result || "")}</td>
                     )}
                     {visibleColumns.has("original_n") && (
-                      <td className="align-top p-2 text-right">{nO != null ? nO : ""}</td>
+                      <td className="align-top p-2 text-right">{nO != null && nO !== 0 ? nO : ""}</td>
                     )}
                     {visibleColumns.has("replication_n") && (
-                      <td className="align-top p-2 text-right">{nR != null ? nR : ""}</td>
+                      <td className="align-top p-2 text-right">{nR != null && nR !== 0 ? nR : ""}</td>
                     )}
                     {visibleColumns.has("original_es_r") && (
-                      <td className="align-top p-2 text-right">{eO != null ? `${formatSig4(eO)}${esOType ? ` ${esOType}` : ""}` : ""}</td>
+                      <td className="align-top p-2 text-right">{eO != null && eO !== 0 ? `${formatSig4(eO)}${esOType ? ` ${esOType}` : ""}` : ""}</td>
                     )}
                     {visibleColumns.has("replication_es_r") && (
-                      <td className="align-top p-2 text-right">{eR != null ? `${formatSig4(eR)}${esRType ? ` ${esRType}` : ""}` : ""}</td>
+                      <td className="align-top p-2 text-right">{eR != null && eR !== 0 ? `${formatSig4(eR)}${esRType ? ` ${esRType}` : ""}` : ""}</td>
                     )}
                     {visibleColumns.has("original_es_r") && (
-                      <td className="align-top p-2 text-right">{eO != null ? formatSig4(eO) : ""}</td>
+                      <td className="align-top p-2 text-right">{eO != null && eO !== 0 ? formatSig4(eO) : ""}</td>
                     )}
                     {visibleColumns.has("replication_es_r") && (
-                      <td className="align-top p-2 text-right">{eR != null ? formatSig4(eR) : ""}</td>
+                      <td className="align-top p-2 text-right">{eR != null && eR !== 0 ? formatSig4(eR) : ""}</td>
                     )}
                     {visibleColumns.has("original_es_type") && (
                       <td className="align-top p-2 text-right">{esOType || ""}</td>
@@ -780,12 +794,12 @@ function InlineScatter({ rows }: { rows: AnyRecord[] }) {
           <span>Success</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="inline-block w-3 h-3 rounded" style={{ background: "#f87171" }} />
-          <span>Failure</span>
-        </div>
-        <div className="flex items-center gap-2">
           <span className="inline-block w-3 h-3 rounded" style={{ background: "#9ca3af" }} />
           <span>Inconclusive</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="inline-block w-3 h-3 rounded" style={{ background: "#f87171" }} />
+          <span>Failure</span>
         </div>
       </div>
     </div>
