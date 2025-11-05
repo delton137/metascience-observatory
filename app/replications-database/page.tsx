@@ -706,7 +706,7 @@ export default function ReplicationsDatabasePage() {
           </div>
         </div>
         <div className="border rounded p-4 col-span-1">
-          <div className="text-sm opacity-70 mb-2">Outcome mix - computed from effect sizes when available ({outcomeStat.n} replications)</div>
+          <div className="text-sm opacity-70 mb-2">Outcome mix - computed from statistics when available ({outcomeStat.n} replications)</div>
           <div className="mb-3">
             <label className="block text-sm font-medium opacity-80 mb-1">
               Method{" "}
