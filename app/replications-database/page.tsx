@@ -10,6 +10,7 @@ type AnyRecord = Record<string, unknown>;
 type FredResponse = {
   columns: string[];
   rows: AnyRecord[];
+  lastUpdated?: string;
 };
 
 type Option = { value: string; label: string };
@@ -171,6 +172,11 @@ function computeConfidenceIntervalOutcome(
   origESType: string,
   repESType: string
 ): "success" | "failure" | "inconclusive" {
+  // Validate inputs
+  if (!Number.isFinite(origES) || !Number.isFinite(repES) || !Number.isFinite(origN) || !Number.isFinite(repN)) {
+    return "inconclusive";
+  }
+  
   // Compute standard error for replication effect size
   let seRep: number | null = null;
 
@@ -244,6 +250,11 @@ function computeConfidenceIntervalOutcome(
   const z95 = 1.96;
   const ciLower = repES - z95 * seRep;
   const ciUpper = repES + z95 * seRep;
+
+  // Validate CI bounds
+  if (!Number.isFinite(ciLower) || !Number.isFinite(ciUpper) || ciLower > ciUpper) {
+    return "inconclusive";
+  }
 
   // Check if original effect size falls within replication CI
   if (origES >= ciLower && origES <= ciUpper) {
@@ -336,8 +347,8 @@ type ColumnKey =
   | "replication_pages"
   | "original_year"
   | "replication_year"
-  | "original_doi"
-  | "replication_doi"
+  | "original_url"
+  | "replication_url"
   | "tags"
   | "validated"
   | "validated_person";
@@ -369,8 +380,8 @@ const ALL_COLUMNS: Array<{ key: ColumnKey; label: string }> = [
   { key: "replication_pages", label: "Replication pages" },
   { key: "original_year", label: "Original year" },
   { key: "replication_year", label: "Replication year" },
-  { key: "original_doi", label: "Original DOI" },
-  { key: "replication_doi", label: "Replication DOI" },
+  { key: "original_url", label: "Original URL" },
+  { key: "replication_url", label: "Replication URL" },
   { key: "tags", label: "Tags" },
   { key: "validated", label: "Human Validated" },
   { key: "validated_person", label: "Validated Person" },
@@ -394,6 +405,7 @@ export default function ReplicationsDatabasePage() {
   const [data, setData] = useState<FredResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
   const [discipline, setDiscipline] = useState<string>("");
   const [openAlexField, setOpenAlexField] = useState<string>("");
@@ -413,6 +425,7 @@ export default function ReplicationsDatabasePage() {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = (await res.json()) as FredResponse;
         setData(json);
+        setLastUpdated(json.lastUpdated || null);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Unknown error");
       } finally {
@@ -511,8 +524,9 @@ export default function ReplicationsDatabasePage() {
     });
   }, [data, discipline, openAlexField, openAlexSubfield, result, search]);
 
-  const stat = useMemo(() => {
-    const n = filteredRows.length;
+  // Stat for outcome mix - only includes rows with effect sizes
+  const outcomeStat = useMemo(() => {
+    let n = 0;
     let success = 0;
     let failure = 0;
     let inconclusive = 0;
@@ -526,10 +540,15 @@ export default function ReplicationsDatabasePage() {
       const esOType = String(r.original_es_type ?? "");
       const esRType = String(r.replication_es_type ?? "");
       
-      let res: "success" | "failure" | "inconclusive";
+      // Only include if effect sizes are available
       if (eO == null || eR == null || nO == null || nR == null || nO <= 0 || nR <= 0) {
-        res = "inconclusive";
-      } else if (outcomeMethod === "significance") {
+        continue; // Skip rows without effect sizes
+      }
+      
+      n++; // Count this row
+      
+      let res: "success" | "failure" | "inconclusive";
+      if (outcomeMethod === "significance") {
         res = computeSignificanceOutcome(eO, eR, nO, nR, esOType, esRType);
       } else { // confidence
         res = computeConfidenceIntervalOutcome(eO, eR, nO, nR, esOType, esRType);
@@ -540,7 +559,6 @@ export default function ReplicationsDatabasePage() {
       else inconclusive++;
       
       // Count rows with both original and replication effect sizes present
-      // (reusing eO and eR already computed above)
       if (eO != null && eR != null && eO !== 0 && eR !== 0) {
         withEffectSizes++;
       }
@@ -548,6 +566,32 @@ export default function ReplicationsDatabasePage() {
     const pct = (v: number) => (n > 0 ? Math.round((v / n) * 1000) / 10 : 0);
     return { n, success, failure, inconclusive, pctSuccess: pct(success), pctFailure: pct(failure), pctInconclusive: pct(inconclusive), withEffectSizes };
   }, [filteredRows, outcomeMethod]);
+
+  // Stat for result column-based display
+  const resultStat = useMemo(() => {
+    const n = filteredRows.length;
+    let success = 0;
+    let failure = 0;
+    let inconclusive = 0;
+    
+    for (const r of filteredRows) {
+      const result = String(r.result ?? "").trim();
+      // Check exact matches (case-sensitive based on data)
+      if (result === "success") {
+        success++;
+      } else if (result === "failure") {
+        failure++;
+      } else if (result === "inconclusive" || result === "") {
+        // Empty result counts as inconclusive
+        inconclusive++;
+      } else {
+        // Any other non-empty value counts as inconclusive
+        inconclusive++;
+      }
+    }
+    const pct = (v: number) => (n > 0 ? Math.round((v / n) * 1000) / 10 : 0);
+    return { n, success, failure, inconclusive, pctSuccess: pct(success), pctFailure: pct(failure), pctInconclusive: pct(inconclusive) };
+  }, [filteredRows]);
 
   if (loading) {
     return (
@@ -641,10 +685,28 @@ export default function ReplicationsDatabasePage() {
       <section className="mx-auto max-w-[90%] grid md:grid-cols-4 gap-4 mt-6">
         <div className="border rounded p-4 col-span-1">
           <div className="text-sm opacity-70">Effect replications</div>
-          <div className="text-3xl font-semibold">{stat.n}</div>
+          <div className="text-3xl font-semibold">{resultStat.n}</div>
+          <div className="text-sm opacity-70 mt-2">Outcome mix (human judgement)</div>
+          <div className="mt-4 space-y-2">
+            <div className="flex items-center gap-3">
+              <div className="w-24 text-sm">Success</div>
+              <div className="flex-1"><MiniBar value={resultStat.pctSuccess} max={100} color="#10b981" /></div>
+              <div className="w-24 text-right text-sm">{resultStat.success} ({resultStat.pctSuccess}%)</div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-24 text-sm">Inconclusive</div>
+              <div className="flex-1"><MiniBar value={resultStat.pctInconclusive} max={100} color="#9ca3af" /></div>
+              <div className="w-24 text-right text-sm">{resultStat.inconclusive} ({resultStat.pctInconclusive}%)</div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-24 text-sm">Failure</div>
+              <div className="flex-1"><MiniBar value={resultStat.pctFailure} max={100} color="#f87171" /></div>
+              <div className="w-24 text-right text-sm">{resultStat.failure} ({resultStat.pctFailure}%)</div>
+            </div>
+          </div>
         </div>
         <div className="border rounded p-4 col-span-1">
-          <div className="text-sm opacity-70 mb-2">Outcome mix ({stat.n} replications)</div>
+          <div className="text-sm opacity-70 mb-2">Outcome mix - computed from effect sizes when available ({outcomeStat.n} replications)</div>
           <div className="mb-3">
             <label className="block text-sm font-medium opacity-80 mb-1">
               Method{" "}
@@ -674,23 +736,23 @@ export default function ReplicationsDatabasePage() {
           <div className="mt-2 space-y-2">
             <div className="flex items-center gap-3">
               <div className="w-24 text-sm">Success</div>
-              <div className="flex-1"><MiniBar value={stat.pctSuccess} max={100} color="#10b981" /></div>
-              <div className="w-24 text-right text-sm">{stat.success} ({stat.pctSuccess}%)</div>
+              <div className="flex-1"><MiniBar value={outcomeStat.pctSuccess} max={100} color="#10b981" /></div>
+              <div className="w-24 text-right text-sm">{outcomeStat.success} ({outcomeStat.pctSuccess}%)</div>
             </div>
             <div className="flex items-center gap-3">
               <div className="w-24 text-sm">Inconclusive</div>
-              <div className="flex-1"><MiniBar value={stat.pctInconclusive} max={100} color="#9ca3af" /></div>
-              <div className="w-24 text-right text-sm">{stat.inconclusive} ({stat.pctInconclusive}%)</div>
+              <div className="flex-1"><MiniBar value={outcomeStat.pctInconclusive} max={100} color="#9ca3af" /></div>
+              <div className="w-24 text-right text-sm">{outcomeStat.inconclusive} ({outcomeStat.pctInconclusive}%)</div>
             </div>
             <div className="flex items-center gap-3">
               <div className="w-24 text-sm">Failure</div>
-              <div className="flex-1"><MiniBar value={stat.pctFailure} max={100} color="#f87171" /></div>
-              <div className="w-24 text-right text-sm">{stat.failure} ({stat.pctFailure}%)</div>
+              <div className="flex-1"><MiniBar value={outcomeStat.pctFailure} max={100} color="#f87171" /></div>
+              <div className="w-24 text-right text-sm">{outcomeStat.failure} ({outcomeStat.pctFailure}%)</div>
             </div>
           </div>
         </div>
         <div className="border rounded p-4 col-span-2">
-          <div className="text-sm opacity-70">Replication Effect Size vs Original Effect Size ({stat.withEffectSizes} replications)</div>
+          <div className="text-sm opacity-70">Replication Effect Size vs Original Effect Size ({outcomeStat.withEffectSizes} replications)</div>
           <div className="mt-2">
             <InlineScatter rows={filteredRows} outcomeMethod={outcomeMethod} />
           </div>
@@ -785,8 +847,8 @@ export default function ReplicationsDatabasePage() {
                 {visibleColumns.has("replication_pages") && <th className="text-left p-2">Replication pages</th>}
                 {visibleColumns.has("original_year") && <th className="text-right p-2">Original year</th>}
                 {visibleColumns.has("replication_year") && <th className="text-right p-2">Replication year</th>}
-                {visibleColumns.has("original_doi") && <th className="text-left p-2">Original DOI</th>}
-                {visibleColumns.has("replication_doi") && <th className="text-left p-2">Replication DOI</th>}
+                {visibleColumns.has("original_url") && <th className="text-left p-2">Original URL</th>}
+                {visibleColumns.has("replication_url") && <th className="text-left p-2">Replication URL</th>}
                 {visibleColumns.has("tags") && <th className="text-left p-2">Tags</th>}
                 {visibleColumns.has("validated") && <th className="text-left p-2">Human Validated</th>}
                 {visibleColumns.has("validated_person") && <th className="text-left p-2">Validated Person</th>}
@@ -911,11 +973,11 @@ export default function ReplicationsDatabasePage() {
                     {visibleColumns.has("replication_year") && (
                       <td className="align-top p-2 text-right">{String(r.replication_year || "")}</td>
                     )}
-                    {visibleColumns.has("original_doi") && (
-                      <td className="align-top p-2">{String(r.original_doi || "")}</td>
+                    {visibleColumns.has("original_url") && (
+                      <td className="align-top p-2">{String(r.original_url || "")}</td>
                     )}
-                    {visibleColumns.has("replication_doi") && (
-                      <td className="align-top p-2">{String(r.replication_doi || "")}</td>
+                    {visibleColumns.has("replication_url") && (
+                      <td className="align-top p-2">{String(r.replication_url || "")}</td>
                     )}
                     {visibleColumns.has("tags") && (
                       <td className="align-top p-2">{String(r.tags || "")}</td>
@@ -937,7 +999,12 @@ export default function ReplicationsDatabasePage() {
             </tbody>
           </table>
         </div>
-        <div className="p-2 text-xs opacity-60">Showing {Math.min(filteredRows.length, 2000)} of {filteredRows.length} rows.</div>
+        <div className="p-2 flex justify-between items-center">
+          <div className="text-xs opacity-60">Showing {Math.min(filteredRows.length, 2000)} of {filteredRows.length} rows.</div>
+          {lastUpdated && (
+            <div className="text-xs opacity-60">Last updated {lastUpdated}</div>
+          )}
+        </div>
       </section>
 
       <section className="mx-auto max-w-[90%] mt-6 space-y-3">

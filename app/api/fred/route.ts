@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 
 type AnyRecord = Record<string, unknown>;
 
-let cachedData: { rows: AnyRecord[]; columns: string[] } | null = null;
+let cachedData: { rows: AnyRecord[]; columns: string[]; lastUpdated?: string } | null = null;
 
 function toNumber(value: unknown): number | null {
   if (value == null) return null;
@@ -58,16 +58,39 @@ async function loadCsv(filePath: string): Promise<{ rows: AnyRecord[]; columns: 
   return { rows: filtered, columns };
 }
 
+async function getLatestFilename(): Promise<string> {
+  const versionHistoryPath = path.join(process.cwd(), "data", "version_history.txt");
+  const versionHistoryText = await fs.readFile(versionHistoryPath, "utf8");
+  const lines = versionHistoryText.trim().split("\n").filter(line => line.trim());
+  const lastLine = lines[lines.length - 1];
+  return lastLine.trim();
+}
+
+function extractDateFromFilename(filename: string): string | null {
+  // Filename format: replications_database_YYYY_MM_DD_HHMMSS.csv
+  // Extract date part: YYYY_MM_DD
+  const match = filename.match(/replications_database_(\d{4})_(\d{2})_(\d{2})_\d+\.csv/);
+  if (match) {
+    const [, year, month, day] = match;
+    return `${year}-${month}-${day}`;
+  }
+  return null;
+}
+
 export async function GET() {
   try {
     if (!cachedData) {
-      const dataPath = path.join(process.cwd(), "data", "replications_database.csv");
-      cachedData = await loadCsv(dataPath);
+      const filename = await getLatestFilename();
+      const dataPath = path.join(process.cwd(), "data", filename);
+      const csvData = await loadCsv(dataPath);
+      const lastUpdated = extractDateFromFilename(filename);
+      cachedData = { ...csvData, lastUpdated: lastUpdated || undefined };
     }
 
     return NextResponse.json({
       columns: cachedData.columns,
       rows: cachedData.rows,
+      lastUpdated: cachedData.lastUpdated,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
