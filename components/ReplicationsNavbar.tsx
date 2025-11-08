@@ -23,6 +23,11 @@ export const ReplicationsNavbar = () => {
           <div className="hidden md:flex items-center gap-6 text-sm">
             <Link href="/" className="text-foreground/80 hover:text-foreground transition-colors">Home</Link>
             <Link href="/#donate" className="text-foreground/80 hover:text-foreground transition-colors">Donate</Link>
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/upload-bibliography">
+                Upload Bibliography
+              </Link>
+            </Button>
           </div>
         </div>
       </div>
