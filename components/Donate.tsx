@@ -18,11 +18,17 @@ export const Donate = () => {
             <div className="space-y-6 text-center">
 
               <p className="text-foreground/90 leading-relaxed">
-                The Metascience Observatory is fiscally sponsored by <a href="https://mindfirst.foundation/" target="_blank" rel="noopener noreferrer" className="underline">Mind First Foundation</a>, a 501(c)(3) nonprofit. Your donation is tax-deductible.
+                The Metascience Observatory is fiscally sponsored by <a href="https://mindfirst.foundation/" target="_blank" rel="noopener noreferrer" className="underline">Mind First Foundation</a>, a 501(c)(3) nonprofit, so your donation is tax-deductible.
               </p>
-              <Button size="lg" variant="hero" className="mt-4" asChild>
+              <Button size="lg" variant="hero" className="mt-4 ml-4" asChild>
                 <a href="https://manifund.org/projects/llm-driven-metascience-observatory" target="_blank" rel="noopener noreferrer">
-                  Donate on Manifund
+                  Donate via Manifund
+                </a>
+              </Button>
+
+              <Button size="lg" variant="hero" className="mt-4 ml-4" asChild>
+                <a href="https://www.paypal.com/ncp/payment/CW5LKALSFKY72" target="_blank" rel="noopener noreferrer">
+                  Donate via PayPal
                 </a>
               </Button>
             </div>

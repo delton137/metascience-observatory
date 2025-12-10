@@ -11,11 +11,28 @@ export default function ApproachPage() {
           <div className="prose prose-lg max-w-none">
             <h1 className="text-3xl font-bold mb-6 text-foreground">Approach</h1>
             
-            <p className="mb-6 text-foreground/90">
-              We have a very different approach to replications compared to previous initiatives. Here is a brief summary of how we define terms and think about things:
-            </p>
-
             <div className="space-y-8 mb-12">
+
+              <section>
+                <h2 className="text-2xl font-bold mb-4 text-foreground">
+                  Our definition of replication
+                </h2>
+                <p className="text-foreground/90 leading-relaxed">
+                  We define a <span className="font-bold">replication</span> as "an experiment which is done to test an effect claim made in prior research." (following{" "}
+                  <a 
+                    href="https://journals.plos.org/plosbiology/article?id=10.1371/journal.pbio.3000691"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline"
+                  >
+                    Nosek & Errington, 2020
+                  </a>
+                  )  
+                  <br></br><br></br>
+                  Currently we are focusing on direct replications, where researchers attempt to replicate a previously published experimental procedure, but our goal is to move towards this more general notion of replication.
+                </p>
+              </section>
+
               <section>
                 <h2 className="text-2xl font-bold mb-4 text-foreground">
                   We are interested in effects, not papers
@@ -25,23 +42,6 @@ export default function ApproachPage() {
                 </p>
               </section>
 
-              <section>
-                <h2 className="text-2xl font-bold mb-4 text-foreground">
-                  Our definition of replication
-                </h2>
-                <p className="text-foreground/90 leading-relaxed">
-                  We define a <span className="font-bold">replication</span> as "an experiment which is done to test an effect claim made in prior research." (closely following{" "}
-                  <a 
-                    href="https://journals.plos.org/plosbiology/article?id=10.1371/journal.pbio.3000691"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline"
-                  >
-                    Nosek & Errington, 2020
-                  </a>
-                  )
-                </p>
-              </section>
 
               <section>
                 <h2 className="text-2xl font-bold mb-4 text-foreground">
