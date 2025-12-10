@@ -3,6 +3,7 @@ import { Navbar } from "@/components/Navbar";
 import { Hero } from "@/components/Hero";
 import { About } from "@/components/About";
 import { Team } from "@/components/Team";
+import { AdvisoryBoard } from "@/components/AdvisoryBoard";
 import { Donate } from "@/components/Donate";
 import { Footer } from "@/components/Footer";
 
@@ -13,6 +14,7 @@ export default function Page() {
       <Hero />
       <About />
       <Team />
+      <AdvisoryBoard />
       <Donate />
       <Footer />
     </div>
