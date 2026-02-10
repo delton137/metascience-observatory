@@ -11,16 +11,14 @@ type FredResponse = {
   rows: AnyRecord[];
 };
 
-type DisciplineRow = {
-  discipline: string;
+type JournalRow = {
+  journal: string;
   replicated: number;
   notReplicated: number;
   total: number;
   replicatedPct: number;
   notReplicatedPct: number;
 };
-
-const MIN_PAPERS = 10;
 
 const THRESHOLD_OPTIONS = [
   { value: 0.5, label: "50%" },
@@ -29,7 +27,9 @@ const THRESHOLD_OPTIONS = [
   { value: 1.0, label: "100%" },
 ];
 
-export default function ByDisciplinePage() {
+const MIN_PAPERS = 15;
+
+export default function ByJournalPage() {
   const [data, setData] = useState<FredResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,23 +51,21 @@ export default function ByDisciplinePage() {
     fetchData();
   }, []);
 
-  const byDiscipline: DisciplineRow[] = useMemo(() => {
+  const byJournal: JournalRow[] = useMemo(() => {
     if (!data) return [];
 
-    // Step 1: Group rows by original_url (paper), collect discipline + results
+    // Step 1: Group rows by original_url (paper), collect journal + results
     const papers = new Map<
       string,
-      { disciplines: string[]; successCount: number; totalCount: number }
+      { journal: string; successCount: number; totalCount: number }
     >();
 
     for (const r of data.rows) {
       const url = String(r.original_url ?? "").trim();
-      const raw = String(r.discipline ?? "");
-      const parts = raw.split(",").map((s) => s.trim()).filter(Boolean);
-      const disciplines = parts.length > 0 ? parts : ["Unspecified"];
+      const journal = String(r.original_journal ?? "").trim();
       const result = String(r.result ?? "").toLowerCase();
 
-      if (!url) continue;
+      if (!url || !journal) continue;
 
       const hasOutcome =
         result.includes("success") || result.includes("failure");
@@ -75,7 +73,7 @@ export default function ByDisciplinePage() {
 
       let paper = papers.get(url);
       if (!paper) {
-        paper = { disciplines, successCount: 0, totalCount: 0 };
+        paper = { journal, successCount: 0, totalCount: 0 };
         papers.set(url, paper);
       }
 
@@ -85,8 +83,8 @@ export default function ByDisciplinePage() {
       }
     }
 
-    // Step 2: Classify each paper at the current threshold, group by discipline
-    const disciplineCounts = new Map<
+    // Step 2: Classify each paper at the current threshold
+    const journalCounts = new Map<
       string,
       { replicated: number; notReplicated: number }
     >();
@@ -94,31 +92,27 @@ export default function ByDisciplinePage() {
     for (const paper of papers.values()) {
       if (paper.totalCount === 0) continue;
 
+      const entry = journalCounts.get(paper.journal) || {
+        replicated: 0,
+        notReplicated: 0,
+      };
+
       const rate = paper.successCount / paper.totalCount;
-      const isReplicated = rate >= threshold;
-
-      for (const d of paper.disciplines) {
-        const entry = disciplineCounts.get(d) || {
-          replicated: 0,
-          notReplicated: 0,
-        };
-
-        if (isReplicated) {
-          entry.replicated++;
-        } else {
-          entry.notReplicated++;
-        }
-
-        disciplineCounts.set(d, entry);
+      if (rate >= threshold) {
+        entry.replicated++;
+      } else {
+        entry.notReplicated++;
       }
+
+      journalCounts.set(paper.journal, entry);
     }
 
-    // Step 3: Compute percentages and sort
-    return Array.from(disciplineCounts.entries())
-      .map(([discipline, v]) => {
+    // Step 3: Filter to journals with MIN_PAPERS+ papers, compute percentages
+    return Array.from(journalCounts.entries())
+      .map(([journal, v]) => {
         const total = v.replicated + v.notReplicated;
         return {
-          discipline,
+          journal,
           ...v,
           total,
           replicatedPct: total > 0 ? (v.replicated / total) * 100 : 0,
@@ -129,24 +123,31 @@ export default function ByDisciplinePage() {
       .sort((a, b) => b.total - a.total);
   }, [data, threshold]);
 
-  const totalPapers = byDiscipline.reduce((sum, d) => sum + d.total, 0);
+  const totalPapers = byJournal.reduce((sum, d) => sum + d.total, 0);
 
-  if (loading) return <main className="min-h-screen px-6 py-10">Loading…</main>;
-  if (error || !data) return <main className="min-h-screen px-6 py-10">Failed to load: {error || "No data"}</main>;
+  if (loading)
+    return <main className="min-h-screen px-6 py-10">Loading…</main>;
+  if (error || !data)
+    return (
+      <main className="min-h-screen px-6 py-10">
+        Failed to load: {error || "No data"}
+      </main>
+    );
 
   return (
     <div className="min-h-screen flex flex-col">
       <ReplicationsNavbar />
       <main className="pt-24 px-6 sm:px-8 md:px-12 lg:px-16 xl:px-24 py-10 flex-1">
-        <div className="max-w-4xl mx-auto space-y-8">
+        <div className="max-w-5xl mx-auto space-y-8">
           <div>
             <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">
-              Paper Replication Success by Discipline
+              Paper Replication Success by Journal
             </h1>
             <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
               Paper-level analysis: a paper is considered &ldquo;replicated&rdquo; if at
               least {Math.round(threshold * 100)}% of its effect replications
-              were successful. Only disciplines with {MIN_PAPERS}+ papers shown.
+              were successful. Only journals with {MIN_PAPERS}+ original papers
+              shown.
             </p>
           </div>
 
@@ -173,42 +174,58 @@ export default function ByDisciplinePage() {
             {/* Legend */}
             <div className="flex gap-6 text-sm">
               <span className="flex items-center gap-2">
-                <span className="inline-block w-3 h-3 rounded" style={{ background: "#10b981" }} /> Replicated
+                <span
+                  className="inline-block w-3 h-3 rounded"
+                  style={{ background: "#10b981" }}
+                />{" "}
+                Replicated
               </span>
               <span className="flex items-center gap-2">
-                <span className="inline-block w-3 h-3 rounded" style={{ background: "#f87171" }} /> Not replicated
+                <span
+                  className="inline-block w-3 h-3 rounded"
+                  style={{ background: "#f87171" }}
+                />{" "}
+                Not replicated
               </span>
             </div>
 
             <span className="text-sm text-gray-500 dark:text-gray-400">
-              {byDiscipline.length} disciplines &middot; {totalPapers} papers
+              {byJournal.length} journals &middot; {totalPapers} papers
             </span>
           </div>
 
           {/* Bars */}
           <div className="space-y-3">
-            {byDiscipline.map((d) => (
-              <div key={d.discipline} className="flex items-center gap-3">
-                <span className="w-48 text-sm text-right shrink-0" title={d.discipline}>
-                  {d.discipline}
+            {byJournal.map((d) => (
+              <div key={d.journal} className="flex items-center gap-3">
+                <span className="text-sm italic text-right shrink-0" style={{ minWidth: "24rem" }}>
+                  {d.journal}
                 </span>
                 <div className="flex-1 h-7 flex rounded overflow-hidden bg-gray-100 dark:bg-gray-800 text-xs font-medium text-white">
                   {d.replicatedPct > 0 && (
                     <div
                       className="h-full transition-all flex items-center justify-center overflow-hidden"
-                      style={{ width: `${d.replicatedPct}%`, background: "#10b981" }}
+                      style={{
+                        width: `${d.replicatedPct}%`,
+                        background: "#10b981",
+                      }}
                       title={`Replicated: ${d.replicated} (${d.replicatedPct.toFixed(1)}%)`}
                     >
-                      {d.replicatedPct >= 10 && `${d.replicatedPct.toFixed(0)}%`}
+                      {d.replicatedPct >= 10 &&
+                        `${d.replicatedPct.toFixed(0)}%`}
                     </div>
                   )}
                   {d.notReplicatedPct > 0 && (
                     <div
                       className="h-full transition-all flex items-center justify-center overflow-hidden"
-                      style={{ width: `${d.notReplicatedPct}%`, background: "#f87171" }}
+                      style={{
+                        width: `${d.notReplicatedPct}%`,
+                        background: "#f87171",
+                      }}
                       title={`Not replicated: ${d.notReplicated} (${d.notReplicatedPct.toFixed(1)}%)`}
                     >
-                      {d.notReplicatedPct >= 10 && `${d.notReplicatedPct.toFixed(0)}%`}
+                      {d.notReplicatedPct >= 10 &&
+                        `${d.notReplicatedPct.toFixed(0)}%`}
                     </div>
                   )}
                 </div>
