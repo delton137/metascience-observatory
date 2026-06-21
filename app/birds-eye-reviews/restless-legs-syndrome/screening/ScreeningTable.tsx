@@ -168,7 +168,6 @@ export function ScreeningTable({
   externalSprayFilter,
   externalAgentFilter,
   externalDesignFilter,
-  externalOrganismFilter,
   externalIndicationFilter,
   externalPhaseFilter,
   sprayTypes,
@@ -178,7 +177,6 @@ export function ScreeningTable({
   externalSprayFilter?: string;
   externalAgentFilter?: string;
   externalDesignFilter?: string;
-  externalOrganismFilter?: string;
   externalIndicationFilter?: string;
   externalPhaseFilter?: string;
   sprayTypes?: string[];
@@ -190,7 +188,6 @@ export function ScreeningTable({
   const [sprayFilter, setSprayFilter] = useState(externalSprayFilter ?? "all");
   const [agentFilter, setAgentFilter] = useState(externalAgentFilter ?? "all");
   const [designFilter, setDesignFilter] = useState(externalDesignFilter ?? "all");
-  const [organismFilter, setOrganismFilter] = useState(externalOrganismFilter ?? "all");
   const [indicationFilter, setIndicationFilter] = useState(externalIndicationFilter ?? "all");
   const [phaseFilter, setPhaseFilter] = useState(externalPhaseFilter ?? "all");
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
@@ -202,10 +199,6 @@ export function ScreeningTable({
   );
   const designs = useMemo(
     () => [...new Set(rows.map((r) => r.study_design).filter(Boolean))].sort(),
-    [rows]
-  );
-  const organisms = useMemo(
-    () => [...new Set(rows.map((r) => r.organism).filter(Boolean))].sort(),
     [rows]
   );
   const indications = useMemo(
@@ -236,28 +229,27 @@ export function ScreeningTable({
     if (sprayFilter !== "all") r = r.filter((row) => row.spray_type === sprayFilter);
     if (agentFilter !== "all") r = r.filter((row) => row.agent_canonical === agentFilter);
     if (designFilter !== "all") r = r.filter((row) => row.study_design === designFilter);
-    if (organismFilter !== "all") r = r.filter((row) => row.organism === organismFilter);
     if (indicationFilter !== "all") r = r.filter((row) => row.indication === indicationFilter);
     if (phaseFilter !== "all") r = r.filter((row) => row.phase === phaseFilter);
     return r;
-  }, [rows, search, sprayFilter, agentFilter, designFilter, organismFilter, indicationFilter, phaseFilter]);
+  }, [rows, search, sprayFilter, agentFilter, designFilter, indicationFilter, phaseFilter]);
 
   // Reset pagination whenever the filtered set changes
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
-  }, [search, sprayFilter, agentFilter, designFilter, organismFilter, indicationFilter, phaseFilter]);
+  }, [search, sprayFilter, agentFilter, designFilter, indicationFilter, phaseFilter]);
 
   // If mounted with an external filter (bar click), scroll into view
   useEffect(() => {
     if (externalSprayFilter || externalAgentFilter || externalDesignFilter
-        || externalOrganismFilter || externalIndicationFilter || externalPhaseFilter) {
+        || externalIndicationFilter || externalPhaseFilter) {
       setTimeout(() => {
         tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 100);
     }
     // eslint-disable-line react-hooks/exhaustive-deps
   }, [externalSprayFilter, externalAgentFilter, externalDesignFilter,
-      externalOrganismFilter, externalIndicationFilter, externalPhaseFilter]);
+      externalIndicationFilter, externalPhaseFilter]);
 
   const visible = filtered.slice(0, visibleCount);
 
@@ -277,7 +269,7 @@ export function ScreeningTable({
           />
         </div>
         <FilterSelect
-          label="Spray Type"
+          label="Drug Class"
           value={sprayFilter}
           onChange={setSprayFilter}
           options={[{ value: "all", label: "All" }, ...sprays.map((s) => ({ value: s, label: formatLabel(s) }))]}
@@ -304,14 +296,6 @@ export function ScreeningTable({
           onChange={setDesignFilter}
           options={[{ value: "all", label: "All" }, ...designs.map((t) => ({ value: t, label: formatLabel(t) }))]}
         />
-        {organisms.length > 0 && (
-          <FilterSelect
-            label="Organism"
-            value={organismFilter}
-            onChange={setOrganismFilter}
-            options={[{ value: "all", label: "All" }, ...organisms.map((o) => ({ value: o, label: formatLabel(o) }))]}
-          />
-        )}
         {indications.length > 0 && (
           <FilterSelect
             label="Prevention / Treatment"
@@ -342,11 +326,10 @@ export function ScreeningTable({
           <thead>
             <tr className="border-b border-border text-left">
               <th className="p-2 w-[35%]">Reference</th>
-              <th className="p-2">Spray Type</th>
-              <th className="p-2">Compound</th>
+              <th className="p-2">Drug Class</th>
+              <th className="p-2">Drug</th>
               <th className="p-2">Study Design</th>
               <th className="p-2">Phase</th>
-              <th className="p-2">Organism</th>
               <th className="p-2">Prevention / Treatment</th>
             </tr>
           </thead>
@@ -406,9 +389,6 @@ function ScreeningRowItem({ row }: { row: ScreeningRow }) {
       <td className="p-2 text-xs">{row.study_design ? formatLabel(row.study_design) : "—"}</td>
       <td className="p-2 text-xs">
         {row.phase && row.phase !== "not_applicable" && row.phase !== "unclear" ? phaseLabel(row.phase) : "—"}
-      </td>
-      <td className="p-2 text-xs">
-        {row.organism && row.organism !== "unclassified" ? formatLabel(row.organism) : "—"}
       </td>
       <td className="p-2 text-xs">
         {row.indication && row.indication !== "unclassified" ? formatLabel(row.indication) : "—"}

@@ -9,12 +9,12 @@ import { ScreeningRow } from "./ScreeningTable";
 import { parseCSV, stripTags, normalizeTitle } from "./csv-utils";
 
 export const metadata = {
-  title: "Trial Screening | Antiviral Nasal Sprays | Bird's Eye Reviews | The Metascience Observatory",
+  title: "Trial Screening | Restless Legs Syndrome | Bird's Eye Reviews | The Metascience Observatory",
   description:
-    "Screening table of articles evaluated for inclusion in the Antiviral Nasal Sprays clinical trials review.",
+    "Screening table of articles evaluated for inclusion in the Restless Legs Syndrome clinical trials review.",
 };
 
-const DATA_DIR = "data/birds_eye_reviews/antiviral_nasal_sprays";
+const DATA_DIR = "data/birds_eye_reviews/restless_legs_syndrome";
 
 /** Generic DOI -> column map from a 2+-column CSV. */
 function loadDoiMap(file: string, valueCol: string): Map<string, string> {
@@ -50,8 +50,9 @@ function loadAgentCanonicalMap(): Map<string, string> {
 }
 
 function loadData(): ScreeningRow[] {
-  const sprayTypes = loadDoiMap("spray_types.csv", "spray_type");
-  const agents = loadDoiMap("spray_types.csv", "agent");
+  // drug_class -> the category column; drug_name -> the compound column.
+  const drugClasses = loadDoiMap("drug_types.csv", "drug_class");
+  const agents = loadDoiMap("drug_types.csv", "drug_name");
   const canonMap = loadAgentCanonicalMap();
   const studyDesigns = loadDoiMap("study_designs.csv", "study_design");
   const organisms = loadDoiMap("indications.csv", "organism");
@@ -68,7 +69,8 @@ function loadData(): ScreeningRow[] {
     const named = agent && agent !== "unspecified";
     return {
       doi,
-      spray_type: sprayTypes.get(doi) ?? "other",
+      // drug_class -> the category bucket shown in the "Drug Class" column / filter
+      spray_type: drugClasses.get(doi) ?? "other",
       agent: named ? agent : "",
       // canonical compound the bar chart groups by (mirrors regen_antiviral_screening_data.py)
       agent_canonical: named ? canonMap.get(agent) ?? agent.toLowerCase() : "",
@@ -133,10 +135,10 @@ export default function ScreeningPage() {
         </div>
 
         <h1 className="font-clarendon font-bold text-3xl mb-2">
-          Antiviral Nasal Spray Trial Screening
+          Restless Legs Syndrome Trial Screening
         </h1>
         <Link
-          href="/birds-eye-reviews/antiviral-nasal-sprays"
+          href="/birds-eye-reviews/restless-legs-syndrome"
           className="inline-flex items-center gap-2 px-4 py-2 mb-4 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors text-sm font-medium"
         >
           &larr; Back to clinical trial results &amp; meta-analysis
@@ -165,8 +167,8 @@ export default function ScreeningPage() {
                 }
               : undefined
           }
-          organismBreakdown={prisma?.organism_breakdown}
           indicationBreakdown={prisma?.indication_breakdown}
+          drugClassBreakdown={prisma?.drug_class_breakdown}
         />
       </main>
       <Footer />

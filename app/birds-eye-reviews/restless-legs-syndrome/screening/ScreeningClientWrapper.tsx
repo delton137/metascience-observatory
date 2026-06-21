@@ -16,24 +16,6 @@ const PHASE_COLORS: Record<string, string> = {
   unclear: "#94a3b8",
 };
 
-const ORGANISM_LABELS: Record<string, string> = {
-  human: "Human",
-  animal: "Animal (in vivo)",
-  in_vitro: "In vitro (cell/virucidal)",
-  ex_vivo: "Ex vivo / tissue",
-  in_silico: "In silico / modeling",
-  mixed: "Mixed (multiple systems)",
-  unclear: "Unclear",
-  unclassified: "Unclassified",
-};
-const ORGANISM_COLORS: Record<string, string> = {
-  human: "#1a5276",
-  animal: "#2e86c1",
-  in_vitro: "#7cb5ec",
-  ex_vivo: "#a9cce3",
-  in_silico: "#d4e6f1",
-  mixed: "#16a085",
-};
 const INDICATION_LABELS: Record<string, string> = {
   prevention: "Prevention (prophylaxis)",
   treatment: "Treatment (therapeutic)",
@@ -66,21 +48,20 @@ export function ScreeningClientWrapper({
   sprayTypes,
   studyType,
   drug,
-  organismBreakdown,
   indicationBreakdown,
+  drugClassBreakdown,
 }: {
   rows: ScreeningRow[];
   sprayTypes: string[];
   studyType?: StudyTypeData;
   drug?: DrugChartData;
-  organismBreakdown?: Record<string, number>;
   indicationBreakdown?: Record<string, number>;
+  drugClassBreakdown?: Record<string, number>;
 }) {
   // Use a counter to force re-trigger even if the same bar is clicked twice
   const [sprayFilter, setSprayFilter] = useState<string | undefined>(undefined);
   const [agentFilter, setAgentFilter] = useState<string | undefined>(undefined);
   const [designFilter, setDesignFilter] = useState<string | undefined>(undefined);
-  const [organismFilter, setOrganismFilter] = useState<string | undefined>(undefined);
   const [indicationFilter, setIndicationFilter] = useState<string | undefined>(undefined);
   const [phaseFilter, setPhaseFilter] = useState<string | undefined>(undefined);
   const [filterKey, setFilterKey] = useState(0);
@@ -89,7 +70,6 @@ export function ScreeningClientWrapper({
     setSprayFilter(undefined);
     setAgentFilter(undefined);
     setDesignFilter(undefined);
-    setOrganismFilter(undefined);
     setIndicationFilter(undefined);
     setPhaseFilter(undefined);
   };
@@ -123,12 +103,6 @@ export function ScreeningClientWrapper({
     setFilterKey((k) => k + 1);
   };
 
-  const handleOrganismClick = (organism: string) => {
-    clearAll();
-    setOrganismFilter(organism);
-    setFilterKey((k) => k + 1);
-  };
-
   const handleIndicationClick = (indication: string) => {
     clearAll();
     setIndicationFilter(indication);
@@ -141,17 +115,23 @@ export function ScreeningClientWrapper({
     setFilterKey((k) => k + 1);
   };
 
+  // "Treatment Studies by Drug Class" bar -> filter the table to that drug class
+  // (the table's Spray/Drug-class column reads row.spray_type, which holds the class).
+  const handleDrugClassClick = (drugClass: string) => {
+    clearAll();
+    setSprayFilter(drugClass);
+    setFilterKey((k) => k + 1);
+  };
+
   return (
     <>
       {studyType && <StudyTypeChart {...studyType} onBarClick={handleDesignClick} />}
-      {organismBreakdown && (
+      {drugClassBreakdown && (
         <BreakdownChart
-          title="Treatment Studies by Organism / System"
-          breakdown={organismBreakdown}
-          labels={ORGANISM_LABELS}
-          colors={ORGANISM_COLORS}
-          onBarClick={handleOrganismClick}
-          clickHint="Click a bar to filter the table below to that organism."
+          title="Treatment Studies by Drug Class"
+          breakdown={drugClassBreakdown}
+          onBarClick={handleDrugClassClick}
+          clickHint="Click a bar to filter the table below to that drug class."
         />
       )}
       {indicationBreakdown && (
@@ -182,7 +162,6 @@ export function ScreeningClientWrapper({
         externalSprayFilter={sprayFilter}
         externalAgentFilter={agentFilter}
         externalDesignFilter={designFilter}
-        externalOrganismFilter={organismFilter}
         externalIndicationFilter={indicationFilter}
         externalPhaseFilter={phaseFilter}
         sprayTypes={sprayTypes}
