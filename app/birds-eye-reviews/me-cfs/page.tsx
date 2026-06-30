@@ -8,13 +8,24 @@ import { ResultsClientWrapper } from "./ResultsClientWrapper";
 import { TrialRow } from "./ResultsTable";
 
 export const metadata = {
-  title: "Clinical Trial Results | Restless Legs Syndrome | Bird's Eye Reviews | The Metascience Observatory",
+  title: "ME/CFS Clinical Trials | Bird's Eye Reviews | The Metascience Observatory",
   description:
-    "Extracted outcomes from the human clinical trials of restless legs syndrome treatments.",
+    "Extracted outcomes from the human clinical trials of myalgic encephalomyelitis / chronic fatigue syndrome (ME/CFS) treatments.",
 };
 
-const DATA_DIR = "data/birds_eye_reviews/restless_legs_syndrome";
+const DATA_DIR = "data/birds_eye_reviews/me_cfs";
 const dataPath = (f: string) => path.join(process.cwd(), DATA_DIR, f);
+
+/** Read a UTF-8 file, returning null when it does not exist or cannot be read.
+ *  Keeps the page renderable while the pipeline is still populating the data dir. */
+function safeRead(fp: string): string | null {
+  try {
+    if (!fs.existsSync(fp)) return null;
+    return fs.readFileSync(fp, "utf-8");
+  } catch {
+    return null;
+  }
+}
 
 /** First-author surname from a "First Last; ..." or "Last, F; ..." author list. */
 function firstAuthorSurname(authors: string): string {
@@ -59,13 +70,14 @@ interface Citation {
 /** doi -> citation metadata from trial_screening.csv (reused screening feed). */
 function loadCitations(): Map<string, Citation> {
   const map = new Map<string, Citation>();
-  const fp = dataPath("trial_screening.csv");
-  if (!fs.existsSync(fp)) return map;
-  const records = parseCSV(fs.readFileSync(fp, "utf-8"));
+  const raw = safeRead(dataPath("trial_screening.csv"));
+  if (raw == null) return map;
+  const records = parseCSV(raw);
   if (records.length === 0) return map;
   const h = records[0].map((x) => x.trim());
   const idx = (name: string) => h.indexOf(name);
   const di = idx("doi");
+  if (di === -1) return map;
   for (const row of records.slice(1)) {
     const doi = (row[di] ?? "").trim();
     if (!doi || map.has(doi)) continue;
@@ -87,9 +99,9 @@ function loadCitations(): Map<string, Citation> {
 /** doi -> indication (prevention / treatment / both / ...) from indications.csv. */
 function loadIndications(): Map<string, string> {
   const map = new Map<string, string>();
-  const fp = dataPath("indications.csv");
-  if (!fs.existsSync(fp)) return map;
-  const records = parseCSV(fs.readFileSync(fp, "utf-8"));
+  const raw = safeRead(dataPath("indications.csv"));
+  if (raw == null) return map;
+  const records = parseCSV(raw);
   if (records.length === 0) return map;
   const h = records[0].map((x) => x.trim());
   const di = h.indexOf("doi");
@@ -113,9 +125,9 @@ interface Verdict {
  *  pass with a statistical-significance guardrail; see classify_trial_verdicts.py). */
 function loadVerdicts(): Map<string, Verdict> {
   const map = new Map<string, Verdict>();
-  const fp = dataPath("trial_verdicts.csv");
-  if (!fs.existsSync(fp)) return map;
-  const records = parseCSV(fs.readFileSync(fp, "utf-8"));
+  const raw = safeRead(dataPath("trial_verdicts.csv"));
+  if (raw == null) return map;
+  const records = parseCSV(raw);
   if (records.length === 0) return map;
   const h = records[0].map((x) => x.trim());
   const idx = (name: string) => h.indexOf(name);
@@ -142,30 +154,12 @@ const DIFF = new Set([
   "risk_difference", "rate_difference",
 ]);
 
-// Iron comes in many salts/routes (ferric carboxymaltose, iron sucrose, oral iron, …);
-// collapse the pure-iron preparations into one "iron" drug so the chart shows iron as a
-// class. The multivitamin combo that merely contains iron is intentionally left separate.
-const IRON_AGENTS = new Set([
-  "ferric carboxymaltose",
-  "ferric carboxymaltose and iron fumarate",
-  "ferrous sulfate",
-  "ferrous sulfate and ferumoxytol",
-  "intravenous iron",
-  "iron dextran",
-  "iron sucrose",
-  "iron supplementation",
-  "oral iron",
-]);
-function canonicalAgent(name: string): string {
-  return IRON_AGENTS.has(name.trim().toLowerCase()) ? "iron" : name;
-}
-
 /** trial_extractions.jsonl -> one TrialRow per extracted trial. */
 function loadTrials(cites: Map<string, Citation>, indications: Map<string, string>, verdicts: Map<string, Verdict>): TrialRow[] {
-  const fp = dataPath("trial_extractions.jsonl");
-  if (!fs.existsSync(fp)) return [];
+  const raw = safeRead(dataPath("trial_extractions.jsonl"));
+  if (raw == null) return [];
   const out: TrialRow[] = [];
-  for (const line of fs.readFileSync(fp, "utf-8").split("\n")) {
+  for (const line of raw.split("\n")) {
     const s = line.trim();
     if (!s) continue;
     let r: Record<string, unknown>;
@@ -213,7 +207,7 @@ function loadTrials(cites: Map<string, Citation>, indications: Map<string, strin
       doi,
       armLabel: String(r.arm_label ?? ""),
       relatedPubs,
-      ingredient: canonicalAgent(String(r.agent_canonical ?? "")),
+      ingredient: String(r.agent_canonical ?? ""),
       indication: indications.get(baseDoi) ?? "",
       // Canonical country names (synonym-merged by the export step); drives the
       // "Trials by country" map and its click-to-filter.
@@ -233,7 +227,6 @@ function loadTrials(cites: Map<string, Citation>, indications: Map<string, strin
       primaryName,
       effMeasure,
       effVal, ciLo, ciHi, pVal,
-      summary: String(r.summary ?? "").slice(0, 400),
       title: c?.title ?? "",
       authors: c?.authors ?? "",
       journal: c?.journal ?? "",
@@ -252,11 +245,6 @@ export default function ResultsPage() {
   const indications = loadIndications();
   const verdicts = loadVerdicts();
   const trials = loadTrials(cites, indications, verdicts);
-  // The meta-analysis lives on a separate opt-in sub-page; only link to it when
-  // the pipeline actually generated meta_analysis.json (off by default).
-  const hasMetaAnalysis = fs.existsSync(dataPath("meta_analysis.json"));
-  // Likewise the (opt-in) network meta-analysis sub-page.
-  const hasNMA = fs.existsSync(dataPath("network_meta_analysis.json"));
 
   return (
     <>
@@ -269,31 +257,19 @@ export default function ResultsPage() {
         </div>
 
         <h1 className="font-clarendon font-bold text-3xl mb-2">
-          Restless Legs Syndrome — Human Clinical Trials
+          ME/CFS — Human Clinical Trials
         </h1>
+        <p className="text-sm text-foreground/60 mb-4 max-w-3xl">
+          Extracted outcomes from the human clinical trials of myalgic encephalomyelitis /
+          chronic fatigue syndrome (ME/CFS) treatments.
+        </p>
         <div className="mb-4 flex flex-wrap gap-2">
           <Link
-            href="/birds-eye-reviews/restless-legs-syndrome/screening"
+            href="/birds-eye-reviews/me-cfs/screening"
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors text-sm font-medium"
           >
             View screening process and preclinical research &rarr;
           </Link>
-          {hasMetaAnalysis && (
-            <Link
-              href="/birds-eye-reviews/restless-legs-syndrome/meta-analysis"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors text-sm font-medium"
-            >
-              View meta-analyses &rarr;
-            </Link>
-          )}
-          {hasNMA && (
-            <Link
-              href="/birds-eye-reviews/restless-legs-syndrome/network-meta-analysis"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors text-sm font-medium"
-            >
-              View network meta-analysis &rarr;
-            </Link>
-          )}
         </div>
 
         <ResultsClientWrapper trials={trials} />

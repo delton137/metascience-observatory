@@ -4,8 +4,10 @@ import { useState, useMemo } from "react";
 import { BreakdownChart, Segment, HoverTrial } from "./screening/BreakdownChart";
 import { ResultsTable, TrialRow } from "./ResultsTable";
 import { YearChart } from "./YearChart";
-/** Distinct-trial count per (canonical) country, for the country filter card. */
-function countriesOf(rows: TrialRow[]): { country: string; count: number }[] {
+import { CountryMap, type CountryCount } from "@/components/CountryMap";
+
+/** Distinct-trial count per (canonical) country, for the "Trials by country" map. */
+function countriesOf(rows: TrialRow[]): CountryCount[] {
   const counts = new Map<string, number>();
   for (const r of rows) {
     for (const c of new Set(r.countries)) counts.set(c, (counts.get(c) ?? 0) + 1);
@@ -31,18 +33,6 @@ const formatDesign = (s: string) =>
 
 const designKey = (r: TrialRow) => r.design || "unknown";
 
-// Delivery device (spray vs drops vs ...), derived in page.tsx from the
-// intervention arm's extracted `route`. Drives the top-level delivery filter.
-const DELIVERY_LABELS: Record<string, string> = {
-  spray: "Nasal spray",
-  drops: "Nasal drops",
-  irrigation: "Nasal irrigation",
-  swab: "Nasal swab / application",
-  other: "Other / unspecified",
-};
-const DELIVERY_ORDER = ["spray", "drops", "irrigation", "swab", "other"];
-const deliveryKey = (t: TrialRow) => t.deliveryMethod || "other";
-
 /** Pretty ingredient label (matches BreakdownChart's prettyLabel). */
 const fmtIngredient = (s: string) =>
   s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -50,8 +40,9 @@ const fmtIngredient = (s: string) =>
 // Trial outcome type: buckets the trial's PRIMARY outcome domain into the
 // high-level question the trial was asking. Drives the top-level filter panel.
 const OUTCOME_TYPES: { key: string; label: string; domains: string[] }[] = [
-  { key: "infection_prevention", label: "Infection prevention", domains: ["infection_prevention", "transmission_reduction"] },
-  { key: "treatment", label: "Treatment (viral load, symptoms, hospitalization)", domains: ["viral_load", "symptom_severity", "symptom_duration", "hospitalization", "quality_of_life"] },
+  { key: "core_symptoms", label: "Core symptoms (fatigue, PEM, pain)", domains: ["fatigue", "post_exertional_malaise", "pain"] },
+  { key: "sleep_cognition", label: "Sleep & cognition", domains: ["sleep_quality", "cognitive_function"] },
+  { key: "function_qol", label: "Function & quality of life", domains: ["physical_function", "quality_of_life", "mood_anxiety", "autonomic_function"] },
   { key: "safety", label: "Safety / adverse events", domains: ["safety_adverse_events"] },
   { key: "other", label: "Other", domains: ["other"] },
 ];
@@ -130,7 +121,7 @@ function hoverTrialsByKey(
       journal: r.journal,
       n: r.n,
       design: r.design,
-      phase: null,
+      phase: r.hoverPhase,
       verdict: r.verdict || undefined,
     });
   }
@@ -143,7 +134,7 @@ export function ResultsClientWrapper({
   trials: TrialRow[];
 }) {
   // Top-level ingredient filter (dropdown + "Trials by Ingredient" bar click). This
-  // is the OUTERMOST filter — every panel, chart, forest plot, and the table react.
+  // is the OUTERMOST filter — every panel, chart, and the table react.
   const [ingredient, setIngredient] = useState<string | undefined>(undefined);
 
   const ingredientKey = (t: TrialRow) => t.ingredient || "unspecified";
@@ -155,57 +146,24 @@ export function ResultsClientWrapper({
   const [selectedCountries, setSelectedCountries] = useState<Set<string>>(new Set());
   const countryFilter = (t: TrialRow) =>
     selectedCountries.size === 0 || t.countries.some((c) => selectedCountries.has(c));
+  const toggleCountry = (c: string) =>
+    setSelectedCountries((prev) => {
+      const next = new Set(prev);
+      if (next.has(c)) next.delete(c); else next.add(c);
+      return next;
+    });
+  // "Select all" = every country present in the data (built once from all trials).
   const allCountryNames = useMemo(
     () => [...new Set(trials.flatMap((t) => t.countries))].sort((a, b) => a.localeCompare(b)),
     [trials]
   );
+  const selectAllCountries = () => setSelectedCountries(new Set(allCountryNames));
   const clearAllCountries = () => setSelectedCountries(new Set());
 
-  // Checkbox-card toggle for countries. Empty selectedCountries = no filter (all pass),
-  // which is displayed as "all checked". Unchecking a country when the set is empty
-  // means "exclude just this one" = add all others to the include set.
-  const toggleCountryCard = (c: string) =>
-    setSelectedCountries((prev) => {
-      if (prev.size === 0) {
-        return new Set(allCountryNames.filter((cc) => cc !== c));
-      }
-      const next = new Set(prev);
-      if (next.has(c)) {
-        next.delete(c);
-      } else {
-        next.add(c);
-        if (allCountryNames.length > 0 && allCountryNames.every((n) => next.has(n))) {
-          return new Set();
-        }
-      }
-      return next;
-    });
-
-  // Delivery-method multi-select filter (spray vs drops vs ...), checkbox panel.
-  // Default: nasal spray only.
-  const allDeliveryList = useMemo(
-    () => Object.keys(countBy(trials, deliveryKey)).sort(
-      (a, b) => DELIVERY_ORDER.indexOf(a) - DELIVERY_ORDER.indexOf(b)
-    ),
-    [trials]
-  );
-  const [selectedDeliveries, setSelectedDeliveries] = useState<Set<string>>(
-    () => new Set(["spray"])
-  );
-  const deliveryFilter = (t: TrialRow) => selectedDeliveries.has(deliveryKey(t));
-  const toggleDelivery = (k: string) =>
-    setSelectedDeliveries((prev) => {
-      const next = new Set(prev);
-      if (next.has(k)) next.delete(k); else next.add(k);
-      return next;
-    });
-  const selectAllDeliveries = () => setSelectedDeliveries(new Set(allDeliveryList));
-  const clearAllDeliveries = () => setSelectedDeliveries(new Set());
-
-  // Top-level trial-outcome-focus filter: a checkbox per outcome type.
-  // Default: infection prevention only.
+  // Top-level trial-outcome-focus filter: a checkbox per outcome type, all checked
+  // by default. Each trial falls in exactly one bucket (by its primary outcome domain).
   const [selectedTypes, setSelectedTypes] = useState<Set<string>>(
-    () => new Set(["infection_prevention"])
+    () => new Set(OUTCOME_TYPES.map((t) => t.key))
   );
   const typeFilter = (t: TrialRow) => selectedTypes.has(outcomeType(t));
   const toggleType = (k: string) => {
@@ -219,13 +177,12 @@ export function ResultsClientWrapper({
   const clearAllTypes = () => setSelectedTypes(new Set());
 
   // Trial-type (study design) multi-select filter — mirrors the long-covid dashboard.
-  // Default: RCT and human-challenge only.
   const allDesignList = useMemo(
     () => Object.entries(countBy(trials, designKey)).sort((a, b) => b[1] - a[1]).map(([d]) => d),
     [trials]
   );
   const [selectedDesigns, setSelectedDesigns] = useState<Set<string>>(
-    () => new Set(["RCT", "human-challenge"].filter((k) => trials.some((t) => designKey(t) === k)))
+    () => new Set(trials.map(designKey))
   );
   const designFilter = (t: TrialRow) => selectedDesigns.has(designKey(t));
   const toggleDesign = (d: string) =>
@@ -237,8 +194,8 @@ export function ResultsClientWrapper({
   const selectAllDesigns = () => setSelectedDesigns(new Set(allDesignList));
   const clearAllDesigns = () => setSelectedDesigns(new Set());
 
-  // Ingredient + country are the outermost filters; the panels / charts / forest
-  // plots / table all derive from this narrowed base.
+  // Ingredient + country are the outermost filters; the panels / charts / table
+  // all derive from this narrowed base.
   const afterIngredient = useMemo(
     () => trials.filter((t) => ingredientFilter(t) && countryFilter(t)),
     [trials, ingredient, selectedCountries]
@@ -250,24 +207,20 @@ export function ResultsClientWrapper({
     [trials, ingredient]
   );
 
-  // Cross-filtering between the three checkbox panels (delivery, outcome focus, trial
-  // type): each panel's denominator + counts come from the base filtered by the OTHER
-  // two panels, so every panel's numbers stay in sync.
-  const exceptDelivery = useMemo(
-    () => afterIngredient.filter((t) => typeFilter(t) && designFilter(t)),
-    [afterIngredient, selectedTypes, selectedDesigns]
-  );
+  // Cross-filtering between the two checkbox panels (outcome focus, trial type):
+  // each panel's denominator + counts come from the base filtered by the OTHER
+  // panel, so every panel's numbers stay in sync.
   const exceptType = useMemo(
-    () => afterIngredient.filter((t) => deliveryFilter(t) && designFilter(t)),
-    [afterIngredient, selectedDeliveries, selectedDesigns]
+    () => afterIngredient.filter((t) => designFilter(t)),
+    [afterIngredient, selectedDesigns]
   );
   const exceptDesign = useMemo(
-    () => afterIngredient.filter((t) => deliveryFilter(t) && typeFilter(t)),
-    [afterIngredient, selectedDeliveries, selectedTypes]
+    () => afterIngredient.filter((t) => typeFilter(t)),
+    [afterIngredient, selectedTypes]
   );
   const filteredTrials = useMemo(
-    () => afterIngredient.filter((t) => deliveryFilter(t) && typeFilter(t) && designFilter(t)),
-    [afterIngredient, selectedDeliveries, selectedTypes, selectedDesigns]
+    () => afterIngredient.filter((t) => typeFilter(t) && designFilter(t)),
+    [afterIngredient, selectedTypes, selectedDesigns]
   );
 
   // Ingredient dropdown options — over ALL trials (independent of the current selection,
@@ -280,8 +233,7 @@ export function ResultsClientWrapper({
       .map((k) => ({ key: k, count: counts[k] }));
   }, [trials]);
 
-  // Each panel's per-option counts come from the base filtered by the OTHER two panels.
-  const deliveryCountMap = useMemo(() => countBy(exceptDelivery, deliveryKey), [exceptDelivery]);
+  // Each panel's per-option counts come from the base filtered by the OTHER panel.
   const typeCountMap = useMemo(() => countBy(exceptType, outcomeType), [exceptType]);
   const designCountMap = useMemo(() => countBy(exceptDesign, designKey), [exceptDesign]);
 
@@ -289,25 +241,19 @@ export function ResultsClientWrapper({
   // full set — darken its background to signal the filter is narrowing results.
   const cardBg = (active: boolean) =>
     `mb-4 border border-border rounded-lg p-3 ${active ? "bg-foreground/[0.07]" : "bg-foreground/[0.02]"}`;
-  const deliveryActive = selectedDeliveries.size !== allDeliveryList.length;
   const typesActive = selectedTypes.size !== OUTCOME_TYPES.length;
   const designsActive = selectedDesigns.size !== allDesignList.length;
-  const countriesActive = selectedCountries.size > 0;
 
   // Breakdowns recomputed from the trial-type-filtered set so the charts react.
   // Trials with no canonical ingredient are bucketed as "unspecified" so the
   // ingredient bars sum to the full trial count (rather than silently dropping).
-  // Trials by ingredient, each bar split by result direction (favors treatment /
-  // control / inconclusive). Trials with no canonical ingredient bucket as
-  // "unspecified" so the bars still sum to the full trial count. (BreakdownChart
-  // sorts the bars by total internally.)
   //
   // This chart reacts to the other panels but NOT to the ingredient selection, so
   // every ingredient bar stays visible — a click highlights the bar (and filters
   // the rest of the page) rather than isolating it.
   const ingredientChartBase = useMemo(
-    () => trials.filter((t) => countryFilter(t) && deliveryFilter(t) && typeFilter(t) && designFilter(t)),
-    [trials, selectedCountries, selectedDeliveries, selectedTypes, selectedDesigns]
+    () => trials.filter((t) => countryFilter(t) && typeFilter(t) && designFilter(t)),
+    [trials, selectedCountries, selectedTypes, selectedDesigns]
   );
   const ingredientVerdictChart = useMemo(
     () => verdictBreakdown(ingredientChartBase, (r) => r.ingredient),
@@ -320,6 +266,7 @@ export function ResultsClientWrapper({
     [ingredientChartBase]
   );
 
+
   // Trials-by-year histogram, driven by the filtered set so it reacts to filters.
   const filteredYears = useMemo(
     () => filteredTrials.map((t) => parseInt(t.year, 10)).filter((y) => !Number.isNaN(y)),
@@ -330,43 +277,51 @@ export function ResultsClientWrapper({
   // filters but NOT to the country selection, so every country stays visible —
   // a click filters the dashboard (click the same country again to clear).
   const countryChartBase = useMemo(
-    () => afterIngredientNoCountry.filter((t) => deliveryFilter(t) && typeFilter(t) && designFilter(t)),
-    [afterIngredientNoCountry, selectedDeliveries, selectedTypes, selectedDesigns]
+    () => afterIngredientNoCountry.filter((t) => typeFilter(t) && designFilter(t)),
+    [afterIngredientNoCountry, selectedTypes, selectedDesigns]
   );
   const allCountries = useMemo(() => countriesOf(countryChartBase), [countryChartBase]);
+  // Selected-country bubbles, sorted for stable display.
+  const selectedCountryList = useMemo(
+    () => [...selectedCountries].sort((a, b) => a.localeCompare(b)),
+    [selectedCountries]
+  );
+
+  // "Trials by country" — moved to the TOP of the page. Multi-select: click a
+  // country (or use Select all) to add it; remove via the × bubbles or Unselect all.
+  const countrySection = (
+    <div className="mb-8 border border-border rounded-lg p-4">
+      <div className="flex items-center gap-3 mb-2 flex-wrap">
+        <h3 className="font-semibold text-lg text-foreground">Trials by country</h3>
+        <span className="text-xs text-foreground/50">
+          {selectedCountries.size === 0
+            ? "Click a country to filter the dashboard. Select multiple to combine."
+            : `Filtering to ${selectedCountries.size} ${selectedCountries.size === 1 ? "country" : "countries"} (${filteredTrials.length} of ${trials.length} trials).`}
+        </span>
+        <button onClick={selectAllCountries} className="text-xs text-blue-600 hover:text-blue-700 ml-auto">Select all</button>
+        <button onClick={clearAllCountries} className="text-xs text-blue-600 hover:text-blue-700">Unselect all</button>
+      </div>
+      {selectedCountryList.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {selectedCountryList.map((c) => (
+            <span key={c} className="inline-flex items-center gap-1.5 text-xs bg-blue-600/10 text-blue-700 border border-blue-600/20 rounded-full px-2.5 py-1">
+              {c}
+              <button onClick={() => toggleCountry(c)} className="hover:text-blue-900 font-semibold leading-none" aria-label={`Remove ${c} filter`}>×</button>
+            </span>
+          ))}
+        </div>
+      )}
+      <CountryMap
+        allCountries={allCountries}
+        selectedCountries={selectedCountryList}
+        onCountryClick={toggleCountry}
+      />
+    </div>
+  );
+
   return (
     <>
-      {/* Delivery-method filter (spray vs drops, checkboxes) — narrows everything below. */}
-      <div className={cardBg(deliveryActive)}>
-        <div className="flex items-center gap-3 mb-2">
-          <span className="text-sm font-medium text-foreground">Filter by delivery method</span>
-          <span className="text-xs text-foreground/50">
-            ({filteredTrials.length} of {exceptDelivery.length} trials selected)
-          </span>
-          <button onClick={selectAllDeliveries} className="text-xs text-blue-600 hover:text-blue-700 ml-auto">Select all</button>
-          <button onClick={clearAllDeliveries} className="text-xs text-blue-600 hover:text-blue-700">Clear all</button>
-        </div>
-        <div className="flex flex-wrap gap-x-4 gap-y-1.5">
-          {allDeliveryList.map((k) => {
-            const checked = selectedDeliveries.has(k);
-            return (
-              <label key={k}
-                className={`inline-flex items-center gap-1.5 cursor-pointer text-sm rounded px-1.5 py-0.5 ${checked ? "" : "bg-foreground/[0.08]"}`}>
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  onChange={() => toggleDelivery(k)}
-                  className="rounded border-foreground/30 text-blue-600 focus:ring-blue-500"
-                />
-                <span className={checked ? "text-foreground" : "text-foreground/50"}>
-                  {DELIVERY_LABELS[k] ?? k}
-                </span>
-                <span className="text-xs text-foreground/40">({deliveryCountMap[k] ?? 0})</span>
-              </label>
-            );
-          })}
-        </div>
-      </div>
+      {countrySection}
 
       {/* Trial-outcome-focus filter (checkboxes, one per outcome type) */}
       <div className={cardBg(typesActive)}>
@@ -432,47 +387,16 @@ export function ResultsClientWrapper({
         </div>
       </div>
 
-      {/* Country filter — checkbox card showing all countries with trial counts. */}
-      <div className={cardBg(countriesActive)}>
-        <div className="flex items-center gap-3 mb-2">
-          <span className="text-sm font-medium text-foreground">Filter by country</span>
-          <span className="text-xs text-foreground/50">
-            ({filteredTrials.length} of {countryChartBase.length} trials selected)
-          </span>
-          <button onClick={clearAllCountries} className="text-xs text-blue-600 hover:text-blue-700 ml-auto">Select all</button>
-        </div>
-        <div className="flex flex-wrap gap-x-4 gap-y-1.5 max-h-40 overflow-y-auto pr-1">
-          {allCountries.map(({ country, count }) => {
-            const checked = !countriesActive || selectedCountries.has(country);
-            return (
-              <label key={country}
-                className={`inline-flex items-center gap-1.5 cursor-pointer text-sm rounded px-1.5 py-0.5 ${checked ? "" : "bg-foreground/[0.08]"}`}>
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  onChange={() => toggleCountryCard(country)}
-                  className="rounded border-foreground/30 text-blue-600 focus:ring-blue-500"
-                />
-                <span className={checked ? "text-foreground" : "text-foreground/50"}>
-                  {country}
-                </span>
-                <span className="text-xs text-foreground/40">({count})</span>
-              </label>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Ingredient filter — the outermost filter; narrows everything below. */}
+      {/* Drug filter — the outermost filter; narrows everything below. */}
       <div className={`mb-8 border border-border rounded-lg p-4 ${ingredient ? "bg-foreground/[0.07]" : "bg-foreground/[0.02]"}`}>
         <div className="flex items-center gap-3 flex-wrap">
-          <span className="text-sm font-medium text-foreground">Filter by ingredient</span>
+          <span className="text-sm font-medium text-foreground">Filter by drug</span>
           <select
             value={ingredient ?? "all"}
             onChange={(e) => setIngredient(e.target.value === "all" ? undefined : e.target.value)}
             className={`border border-border rounded px-3 py-1.5 text-sm max-w-[22rem] ${ingredient ? "bg-foreground/[0.08]" : "bg-background"}`}
           >
-            <option value="all">All ingredients</option>
+            <option value="all">All drugs</option>
             {ingredientOptions.map((o) => (
               <option key={o.key} value={o.key}>{fmtIngredient(o.key)} ({o.count})</option>
             ))}
@@ -490,11 +414,11 @@ export function ResultsClientWrapper({
 
       {/* Breakdown charts */}
       {Object.keys(ingredientVerdictChart).length > 0 && (
-        <BreakdownChart title="Trials by Ingredient" breakdown={ingredientVerdictChart}
+        <BreakdownChart title="Trials by Intervention" breakdown={ingredientVerdictChart}
           segments={VERDICT_SEGMENTS} selectedKey={ingredient} collapseSingletons collapseMaxTrials={3}
           hoverTrials={ingredientHoverTrials}
           onBarClick={(k) => setIngredient((cur) => (cur === k ? undefined : k))}
-          clickHint="Each bar is split by result direction — click a bar to filter the whole dashboard to that ingredient (click again to clear). Hover for individual study details. Single-trial ingredients are listed below." />
+          clickHint="Each bar is split by result direction — click a bar to filter the whole dashboard to that drug (click again to clear). Hover for individual study details. Single-trial drugs are listed below." />
       )}
 
       {/* Trials by year (reacts to the filters above) */}
