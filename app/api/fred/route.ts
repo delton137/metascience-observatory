@@ -33,6 +33,41 @@ function normalizeEffectSigns(row: AnyRecord): void {
   }
 }
 
+
+/**
+ * Rows that are SAME-DATA RE-ANALYSES rather than NEW-DATA REPLICATIONS.
+ *
+ * These answer different questions. A re-analysis asks "did they compute it
+ * correctly?"; a replication asks "is the effect real?" Brodeur et al. (2026,
+ * Nature 652:151-156) find the median re-analysis effect is 99% the size of
+ * the published one, because it is largely the same arithmetic on the same
+ * numbers. Pooling the two inflates every replication rate on the site and
+ * understates every measure of effect-size shrinkage.
+ *
+ * The database has no field for this. `replication_type` describes how closely
+ * the PROTOCOL matched (direct / close / conceptual / ...) and no value of it
+ * encodes whether new data were collected -- and the re-analyses are filed
+ * under "close experiment", which reads as the opposite of what they are.
+ *
+ * Until a proper `evidence_type` column exists, the DARPA SCORE block is
+ * excluded here: per Tyner et al. (2026, Nature 652:143-150) its political
+ * science arm is 25 of 28 secondary-data re-analyses and sociology 14 of 15.
+ * Those three fields are 84-91% SCORE in this database, so their published
+ * rates are effectively that programme's rates wearing a field's name.
+ *
+ * This is a BLUNT instrument and it is meant to be temporary: it drops the
+ * genuine new-data replications inside SCORE along with the re-analyses.
+ * Replace it with a per-row `evidence_type` as soon as one exists, and delete
+ * this function.
+ */
+const EXCLUDE_SECONDARY_REANALYSES =
+  process.env.MO_INCLUDE_REANALYSES !== "1";
+
+function isSecondaryDataReanalysis(row: AnyRecord): boolean {
+  const src = String(row.source ?? "");
+  return /DARPA\s*SCORE|Tyner/i.test(src);
+}
+
 async function loadCsv(filePath: string): Promise<{ rows: AnyRecord[]; columns: string[] }> {
   const csvText = await fs.readFile(filePath, "utf8");
   const rows = csvParse(csvText);
@@ -53,6 +88,7 @@ async function loadCsv(filePath: string): Promise<{ rows: AnyRecord[]; columns: 
     return obj;
   });
   const filtered = normalized.filter((r: AnyRecord) => {
+    if (EXCLUDE_SECONDARY_REANALYSES && isSecondaryDataReanalysis(r)) return false;
     const eO = Number(String(r.original_es_r ?? "").trim());
     const eR = Number(String(r.replication_es_r ?? "").trim());
     return Number.isFinite(eO) && Number.isFinite(eR);
